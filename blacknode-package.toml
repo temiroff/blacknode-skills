@@ -15,12 +15,25 @@ capabilities = ["skill.pick-place"]
 description = "Capability-driven person following skill."
 default = false
 capabilities = ["skill.follow-person"]
+nodes = ["components/follow-person/nodes"]
+
+[components.follow-person.dependencies]
+requires = [
+  { package = "blacknode-ros2", component = "core", version = ">=0.3.0,<1.0.0" },
+]
 
 [components.follow-person.adapters.ros2]
-description = "ROS 2 composition templates for target following and leader/follower operation."
+description = "Visual-follow and leader/follower node implementations and composition templates over ROS 2 transports."
 default = false
 capabilities = ["adapter.skill.follow-person.ros2"]
+nodes = ["components/follow-person/adapters/ros2/nodes"]
 templates = ["components/follow-person/adapters/ros2/templates"]
+node-types = [
+  "ROS2NativeFollowDetectionJoint",
+  "ROS2FollowDetectionJoint",
+  "ROS2ContinuousFollowDetectionJoint",
+  "ROS2LeaderFollower",
+]
 
 [components.follow-person.adapters.ros2.dependencies]
 requires = [
