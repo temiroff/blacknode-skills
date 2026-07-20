@@ -1,0 +1,32 @@
+[package]
+name = "blacknode-skills"
+version = "0.1.0"
+description = "Reusable task-level robot skills composed from stable Blacknode capabilities."
+requires-blacknode = ">=0.1.0"
+layer = "skills"
+component-mode = true
+
+[components.pick-place]
+description = "Capability-driven pick and place skill."
+default = false
+capabilities = ["skill.pick-place"]
+
+[components.follow-person]
+description = "Capability-driven person following skill."
+default = false
+capabilities = ["skill.follow-person"]
+
+[components.delivery]
+description = "Package and item delivery mission skill."
+default = false
+capabilities = ["skill.delivery"]
+
+[components.docking]
+description = "Robot docking and charging skill."
+default = false
+capabilities = ["skill.docking"]
+
+[components.inspection]
+description = "Structured inspection mission skill."
+default = false
+capabilities = ["skill.inspection"]
