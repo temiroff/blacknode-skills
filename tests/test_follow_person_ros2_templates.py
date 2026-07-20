@@ -29,7 +29,7 @@ def test_cube_template_uses_live_cv2_stream_and_qwen3():
     assert "tracking_mode" not in workflow["node_meta"]["cv2_stream"]["params"]
     assert "fallback_color" not in workflow["node_meta"]["cv2_stream"]["params"]
     assert "lower_hsv" not in workflow["node_meta"]["cv2_stream"]["params"]
-    assert workflow["node_meta"]["live_reason"]["type"] == "VisionReasoningStream"
+    assert workflow["node_meta"]["live_reason"]["type"] == "ReasoningStream"
     assert workflow["node_meta"]["live_reason"]["params"]["model"] == "qwen3-vl:4b"
     assert workflow["node_meta"]["live_reason"]["params"]["max_tokens"] == 4096
     assert workflow["node_meta"]["live_reason"]["params"]["interval_seconds"] == 3.0

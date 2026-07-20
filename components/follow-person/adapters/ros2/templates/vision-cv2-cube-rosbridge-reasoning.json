@@ -23,7 +23,7 @@
           "CV2ColorObjectStream",
           "CV2ColorObjectTracker",
           "CV2HSVMask",
-          "VisionReasoningStream"
+          "ReasoningStream"
         ]
       },
       {
@@ -464,7 +464,7 @@
     },
     "live_reason": {
       "id": "live_reason",
-      "type": "VisionReasoningStream",
+      "type": "ReasoningStream",
       "params": {
         "action": "start",
         "stream_id": "live_reasoning",
