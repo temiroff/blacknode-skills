@@ -2,7 +2,7 @@
 name = "blacknode-skills"
 version = "0.1.0"
 description = "Reusable task-level robot skills composed from stable Blacknode capabilities."
-requires-blacknode = ">=0.1.0"
+requires-blacknode = ">=0.3.0"
 layer = "skills"
 component-mode = true
 
@@ -15,6 +15,18 @@ capabilities = ["skill.pick-place"]
 description = "Capability-driven person following skill."
 default = false
 capabilities = ["skill.follow-person"]
+
+[components.follow-person.adapters.ros2]
+description = "ROS 2 composition templates for target following and leader/follower operation."
+default = false
+capabilities = ["adapter.skill.follow-person.ros2"]
+templates = ["components/follow-person/adapters/ros2/templates"]
+
+[components.follow-person.adapters.ros2.dependencies]
+requires = [
+  { package = "blacknode-robot", component = "core", version = ">=0.2.0,<1.0.0" },
+  { package = "blacknode-ros2", component = "core", version = ">=0.3.0,<1.0.0" },
+]
 
 [components.delivery]
 description = "Package and item delivery mission skill."
