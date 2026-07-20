@@ -28,6 +28,8 @@ jobs:
           mkdir -p core/packages
           git clone --depth 1 https://github.com/temiroff/blacknode-ros2.git core/packages/blacknode-ros2
           git clone --depth 1 https://github.com/temiroff/blacknode-robot.git core/packages/blacknode-robot
+          git clone --depth 1 https://github.com/temiroff/blacknode-perception.git core/packages/blacknode-perception
+          git clone --depth 1 https://github.com/temiroff/blacknode-cuda.git core/packages/blacknode-cuda
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
@@ -63,6 +65,7 @@ jobs:
           PYTHONPATH: python
         shell: bash
         run: |
+          python -m blacknode.cli packages enable blacknode-skills follow-person --adapter ros2
           find ../package -path '*/templates/*.json' -print0 | while IFS= read -r -d '' template; do
             python -m blacknode.cli validate "$template"
           done
