@@ -14,8 +14,8 @@
     "required_adapters": ["blacknode-skills/follow-person@ros2"],
     "required_packages": [
       {
-        "name": "blacknode-vision",
-        "git_url": "https://github.com/temiroff/blacknode-vision.git",
+        "name": "blacknode-perception",
+        "git_url": "https://github.com/temiroff/blacknode-perception.git",
         "node_types": [
           "Camera",
           "CV2ColorObjectStream",

@@ -1,6 +1,6 @@
 """Structural checks on the vision-driven follow-person@ros2 mission templates.
 
-These moved out of blacknode-vision along with the follow-node types they
+These moved out of blacknode-vision (now blacknode-perception) along with the follow-node types they
 reference (see the embodied-robotics-roadmap Stage D item on extracting
 follow-target/leader-follower behavior into this adapter).
 """
@@ -114,7 +114,7 @@ def test_cube_continuous_template_uses_generic_setup_nodes():
         for edge in workflow["edges"]
     }
 
-    assert {"blacknode-vision", "blacknode-ros2", "blacknode-skills", "blacknode-robot", "blacknode-cuda"} <= package_names
+    assert {"blacknode-perception", "blacknode-ros2", "blacknode-skills", "blacknode-robot", "blacknode-cuda"} <= package_names
     assert not any("Native" in node_type or "Rosbridge" in node_type for node_type in node_types.values())
     assert node_types["check"] == "ROS2Status"
     assert node_types["stream"] == "Camera"
