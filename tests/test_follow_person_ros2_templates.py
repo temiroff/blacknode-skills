@@ -91,7 +91,7 @@ def test_cube_ros2_template_keeps_ros_camera_and_generic_robot_transport():
     assert sum(node_type == "Robot" for node_type in node_types.values()) == 1
     assert not any("Native" in node_type or "Rosbridge" in node_type for node_type in node_types.values())
     assert "CV2CameraStream" not in node_types.values()
-    assert workflow["node_meta"]["camera_run"]["params"]["package"] == "blacknode_usb_camera"
+    assert workflow["node_meta"]["camera_run"]["params"]["package"] == "perception_camera"
     assert workflow["node_meta"]["stream"]["params"]["topic"] == "/camera/image_raw"
     assert ("check", "report", "camera_run", "trigger") in edges
     assert ("camera_run", "report", "stream", "trigger") in edges

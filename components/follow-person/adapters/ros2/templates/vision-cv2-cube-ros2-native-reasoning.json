@@ -22,7 +22,8 @@
           "CV2ColorObjectStream",
           "CV2ColorObjectTracker",
           "CV2HSVMask",
-          "ReasoningStream"
+          "ReasoningStream",
+          "ROS2ImageStream"
         ]
       },
       {
@@ -30,10 +31,7 @@
         "git_url": "https://github.com/temiroff/blacknode-ros2.git",
         "node_types": [
           "ROS2SystemCheck",
-          "ROS2Run",
-          "ROS2ImageStream",
-          "ROS2JointState",
-          "ROS2MotionDashboard"
+          "ROS2Run"
         ]
       },
       {
@@ -55,6 +53,14 @@
         "git_url": "https://github.com/temiroff/blacknode-cuda.git",
         "node_types": [
           "CUDAImageFilterStream"
+        ]
+      },
+      {
+        "name": "blacknode-controllers",
+        "git_url": "https://github.com/temiroff/blacknode-controllers.git",
+        "node_types": [
+          "ROS2JointState",
+          "ROS2MotionDashboard"
         ]
       }
     ]
@@ -96,7 +102,7 @@
       "params": {
         "action": "start",
         "run_id": "vision_camera",
-        "package": "blacknode_usb_camera",
+        "package": "perception_camera",
         "executable": "usb_camera",
         "arguments": "--ros-args -p device:=0 -p image_topic:=/camera/image_raw -p width:=640 -p height:=480 -p hz:=30.0",
         "expected_topic": "/camera/image_raw",
@@ -139,7 +145,7 @@
       "input_defaults": {
         "action": "start",
         "run_id": "vision_camera",
-        "package": "blacknode_usb_camera",
+        "package": "perception_camera",
         "executable": "usb_camera",
         "arguments": "--ros-args -p device:=0 -p image_topic:=/camera/image_raw -p width:=640 -p height:=480 -p hz:=30.0",
         "expected_topic": "/camera/image_raw",

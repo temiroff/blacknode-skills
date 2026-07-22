@@ -570,10 +570,19 @@ def test_leader_follower_live_service_updates_and_stops(monkeypatch):
         leader_follower_runtime.stop_leader_follower_services()
 
 
-def test_ros2_live_stop_delegates_to_follow_person_runtimes(monkeypatch):
-    """ros2_live.stop_runtime_services() reaches this adapter's run counts once it's loaded."""
-    from blacknode.pkg.blacknode_ros2 import ros2_live as live
+def test_joint_control_stop_delegates_to_follow_person_runtimes(monkeypatch):
+    """The joint-control adapter's stop_runtime_services() reaches this adapter's run counts."""
+    from blacknode.packages import _import_nodes_module
     from blacknode.pkg.blacknode_ros2 import rosbridge_runtime as ros2_rb
+
+    adapter_nodes = (
+        Path(__file__).resolve().parents[2]
+        / "blacknode-controllers" / "components" / "joint-control" / "adapters" / "ros2" / "nodes"
+    )
+    _import_nodes_module(
+        "blacknode.pkg.blacknode_controllers.joint_control.adapters.ros2", adapter_nodes
+    )
+    from blacknode.pkg.blacknode_controllers.joint_control.adapters.ros2 import joint_motion as live
 
     monkeypatch.setattr(follow_runtime, "stop_continuous_follow_services", lambda: {
         "ok": True, "stopped": 2, "report": "stopped 2",

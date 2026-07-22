@@ -8,9 +8,9 @@
     "template": true,
     "description": "Directly control robot index 1 from torque-released robot index 0. Each physical arm uses one Robot node; teleoperation starts in disarmed preview mode.",
     "color": "#14b8a6",
-    "required_packages": ["blacknode-skills", "blacknode-robot", "blacknode-ros2"],
-    "required_components": ["blacknode-skills/follow-person", "blacknode-robot/core", "blacknode-ros2/core"],
-    "required_adapters": ["blacknode-skills/follow-person@ros2"]
+    "required_packages": ["blacknode-skills", "blacknode-robot", "blacknode-controllers", "blacknode-ros2"],
+    "required_components": ["blacknode-skills/follow-person", "blacknode-robot/core", "blacknode-controllers/joint-control", "blacknode-ros2/core"],
+    "required_adapters": ["blacknode-skills/follow-person@ros2", "blacknode-controllers/joint-control@ros2"]
   },
   "node_meta": {
     "rosbridge": {
