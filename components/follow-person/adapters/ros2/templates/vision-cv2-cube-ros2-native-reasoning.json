@@ -23,7 +23,7 @@
           "CV2ColorObjectTracker",
           "CV2HSVMask",
           "ReasoningStream",
-          "ROS2ImageStream"
+          "CameraROS2Subscribe"
         ]
       },
       {
@@ -160,7 +160,7 @@
     },
     "stream": {
       "id": "stream",
-      "type": "ROS2ImageStream",
+      "type": "CameraROS2Subscribe",
       "params": {
         "action": "start",
         "stream_id": "vision_camera",

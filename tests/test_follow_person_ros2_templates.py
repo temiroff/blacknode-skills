@@ -83,7 +83,7 @@ def test_cube_ros2_template_keeps_ros_camera_and_generic_robot_transport():
     }
 
     assert node_types["camera_run"] == "ROS2Run"
-    assert node_types["stream"] == "ROS2ImageStream"
+    assert node_types["stream"] == "CameraROS2Subscribe"
     assert node_types["follow_cube"] == "ROS2FollowDetectionJoint"
     assert node_types["robot"] == "Robot"
     assert workflow["node_meta"]["robot"]["params"]["profile_id"] == "so_arm101"
