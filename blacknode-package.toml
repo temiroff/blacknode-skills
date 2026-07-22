@@ -32,10 +32,8 @@ capabilities = ["adapter.skill.follow-person.ros2"]
 nodes = ["components/follow-person/adapters/ros2/nodes"]
 templates = ["components/follow-person/adapters/ros2/templates"]
 node-types = [
-  "ROS2NativeFollowDetectionJoint",
-  "ROS2FollowDetectionJoint",
-  "ROS2ContinuousFollowDetectionJoint",
-  "ROS2LeaderFollower",
+  "ROS2ContinuousFollowDetectionJoint", "ROS2FollowDetectionJoint", "ROS2LeaderFollower",
+  "ROS2NativeFollowDetectionJoint"
 ]
 
 [components.follow-person.adapters.ros2.dependencies]
