@@ -6,6 +6,9 @@ requires-blacknode = ">=0.3.0"
 layer = "skills"
 component-mode = true
 
+[categories]
+"Skills" = "#eab308"
+
 [components.pick-place]
 description = "Capability-driven pick and place skill."
 default = false
