@@ -34,7 +34,7 @@ def test_follow_person_ros2_nodes_registered_with_category():
     for name in [
         "ROS2NativeFollowDetectionJoint",
         "ROS2FollowDetectionJoint",
-        "ROS2ContinuousFollowDetectionJoint",
+        "RobotFollow",
         "ROS2LeaderFollower",
     ]:
         assert name in _NODE_REGISTRY, name
@@ -221,7 +221,7 @@ def test_continuous_follow_runs_until_stopped(monkeypatch):
     monkeypatch.setattr(follow_runtime, "_continuous_follow_step", fake_follow)
     follow_runtime.stop_continuous_follow_services()
     try:
-        started = _NODE_REGISTRY["ROS2ContinuousFollowDetectionJoint"]({
+        started = _NODE_REGISTRY["RobotFollow"]({
             "action": "start",
             "run_id": "test_follow",
             "loop_hz": 20.0,
@@ -232,7 +232,7 @@ def test_continuous_follow_runs_until_stopped(monkeypatch):
         assert started["running"] is True
         assert called.wait(1.0)
 
-        checked = _NODE_REGISTRY["ROS2ContinuousFollowDetectionJoint"]({
+        checked = _NODE_REGISTRY["RobotFollow"]({
             "action": "check",
             "run_id": "test_follow",
             "joint": "shoulder_pan",
@@ -240,7 +240,7 @@ def test_continuous_follow_runs_until_stopped(monkeypatch):
         assert checked["running"] is True
         assert checked["command"] == 2.0
 
-        stopped = _NODE_REGISTRY["ROS2ContinuousFollowDetectionJoint"]({
+        stopped = _NODE_REGISTRY["RobotFollow"]({
             "action": "stop",
             "run_id": "test_follow",
             "joint": "shoulder_pan",
@@ -341,7 +341,7 @@ def test_continuous_follow_step_resets_stale_joint_stream(monkeypatch):
 
 def test_continuous_follow_disarmed_does_not_start():
     follow_runtime.stop_continuous_follow_services()
-    result = _NODE_REGISTRY["ROS2ContinuousFollowDetectionJoint"]({
+    result = _NODE_REGISTRY["RobotFollow"]({
         "action": "start",
         "run_id": "test_disarmed",
         "detection_url": "http://127.0.0.1:9999/detection.json",

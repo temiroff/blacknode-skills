@@ -13,13 +13,13 @@ TEMPLATE_DIR = Path(__file__).resolve().parents[1] / "components" / "follow-pers
 
 
 def test_cube_template_uses_live_cv2_stream_and_qwen3():
-    path = TEMPLATE_DIR / "vision-cv2-cube-local-reasoning.json"
+    path = TEMPLATE_DIR / "cube-follow-local-camera.json"
     workflow = json.loads(path.read_text(encoding="utf-8"))
     assert workflow["node_meta"]["stream"]["type"] == "Camera"
     assert workflow["node_meta"]["stream"]["params"]["selection"] == 0
     assert "backend" not in workflow["node_meta"]["stream"]["params"]
     assert "camera_run" not in workflow["node_meta"]
-    assert workflow["node_meta"]["cv2_stream"]["type"] == "CV2ColorObjectStream"
+    assert workflow["node_meta"]["cv2_stream"]["type"] == "TrackingObject"
     assert workflow["node_meta"]["target_prompt"]["type"] == "Text"
     assert "green cube" not in workflow["node_meta"]["target_prompt"]["params"]["value"].lower()
     assert "target_hint" not in workflow["node_meta"]
@@ -40,14 +40,17 @@ def test_cube_template_uses_live_cv2_stream_and_qwen3():
         (edge["from"], edge["from_port"], edge["to"], edge["to_port"])
         for edge in workflow["edges"]
     }
-    assert ("stream", "snapshot_url", "cv2_stream", "source_url") in edges
+    assert ("stream", "frame_stream", "cv2_stream", "frame_stream") in edges
     assert ("target_prompt", "value", "live_reason", "prompt") in edges
     assert ("live_reason", "state_url", "cv2_stream", "reasoning_state_url") in edges
     assert ("target_prompt", "value", "cv2_stream", "target") not in edges
-    assert ("cv2_stream", "preview", "overlay_out", "image") in edges
+    # The live nodes render their own preview, so the OutputImage "decal" mirrors
+    # were removed. Only the mask viewer stays (the mask is not the tracking
+    # node's own preview).
+    output_images = [nid for nid, meta in workflow["node_meta"].items() if meta["type"] == "OutputImage"]
+    assert output_images == ["mask_out"]
     assert ("cv2_stream", "mask", "mask_out", "image") in edges
     assert ("stream", "snapshot_url", "live_reason", "image_url") in edges
-    assert ("live_reason", "preview", "reason_dashboard_out", "image") in edges
     assert ("cv2_stream", "detection_url", "live_reason", "detection_url") not in edges
     assert workflow["node_meta"]["check"]["type"] == "ROS2Status"
     assert workflow["node_meta"]["robot"]["type"] == "Robot"
@@ -55,26 +58,26 @@ def test_cube_template_uses_live_cv2_stream_and_qwen3():
     assert workflow["node_meta"]["robot"]["params"]["selection"] == 0
     assert sum(meta["type"] == "Robot" for meta in workflow["node_meta"].values()) == 1
     assert workflow["node_meta"]["joint_state"]["type"] == "ROS2JointState"
-    assert workflow["node_meta"]["follow_cube"]["type"] == "ROS2ContinuousFollowDetectionJoint"
+    assert workflow["node_meta"]["follow_cube"]["type"] == "RobotFollow"
     assert workflow["node_meta"]["follow_cube"]["params"]["action"] == "start"
-    assert workflow["node_meta"]["follow_cube"]["params"]["loop_hz"] == 2.0
+    assert workflow["node_meta"]["follow_cube"]["params"]["loop_hz"] == 10.0
     assert workflow["node_meta"]["follow_cube"]["params"]["joint"] == "shoulder_pan"
-    assert workflow["node_meta"]["follow_cube"]["params"]["armed"] is False
+    assert workflow["node_meta"]["follow_cube"]["params"]["armed"] is True
     assert workflow["node_meta"]["follow_cube"]["params"]["frame_width"] == 640
     assert workflow["node_meta"]["follow_cube"]["params"]["target_x"] == 0.4
-    assert workflow["node_meta"]["follow_cube"]["params"]["deadband"] == 0.12
-    assert workflow["node_meta"]["follow_cube"]["params"]["gain"] == 10.0
-    assert workflow["node_meta"]["follow_cube"]["params"]["max_step"] == 2.0
+    assert workflow["node_meta"]["follow_cube"]["params"]["deadband"] == 0.03
+    assert workflow["node_meta"]["follow_cube"]["params"]["gain"] == 4.0
+    assert workflow["node_meta"]["follow_cube"]["params"]["max_step"] == 0.75
     assert workflow["node_meta"]["cv2_stream"]["params"]["show_follow_guides"] is True
     assert workflow["node_meta"]["cv2_stream"]["params"]["follow_target_x"] == 0.4
-    assert workflow["node_meta"]["cv2_stream"]["params"]["follow_deadband"] == 0.12
+    assert workflow["node_meta"]["cv2_stream"]["params"]["follow_deadband"] == 0.03
     assert "shoulder_pan_index" not in workflow["node_meta"]
     assert ("joint_state", "names", "shoulder_pan_index", "items") not in edges
     assert ("shoulder_pan_index", "value", "follow_cube", "joint") not in edges
 
 
 def test_cube_ros2_template_keeps_ros_camera_and_generic_robot_transport():
-    path = TEMPLATE_DIR / "vision-cv2-cube-ros2-native-reasoning.json"
+    path = TEMPLATE_DIR / "cube-follow-ros2-camera.json"
     workflow = json.loads(path.read_text(encoding="utf-8"))
     node_types = {node_id: meta["type"] for node_id, meta in workflow["node_meta"].items()}
     edges = {
@@ -95,11 +98,11 @@ def test_cube_ros2_template_keeps_ros_camera_and_generic_robot_transport():
     assert workflow["node_meta"]["stream"]["params"]["topic"] == "/camera/image_raw"
     assert ("check", "report", "camera_run", "trigger") in edges
     assert ("camera_run", "report", "stream", "trigger") in edges
-    assert ("stream", "snapshot_url", "cv2_stream", "source_url") in edges
+    assert ("stream", "frame_stream", "cv2_stream", "frame_stream") in edges
 
 
 def test_cube_continuous_template_uses_generic_setup_nodes():
-    path = TEMPLATE_DIR / "vision-cv2-cube-rosbridge-reasoning.json"
+    path = TEMPLATE_DIR / "cube-follow-local-camera.json"
     workflow = json.loads(path.read_text(encoding="utf-8"))
     node_types = {
         node_id: meta["type"]
@@ -124,10 +127,10 @@ def test_cube_continuous_template_uses_generic_setup_nodes():
     assert workflow["node_meta"]["robot"]["params"]["selection"] == 0
     assert sum(node_type == "Robot" for node_type in node_types.values()) == 1
     assert node_types["joint_state"] == "ROS2JointState"
-    assert node_types["follow_cube"] == "ROS2ContinuousFollowDetectionJoint"
+    assert node_types["follow_cube"] == "RobotFollow"
     assert workflow["node_meta"]["follow_cube"]["params"]["action"] == "start"
     assert workflow["node_meta"]["follow_cube"]["params"]["loop_hz"] == 10.0
-    assert workflow["node_meta"]["follow_cube"]["params"]["armed"] is False
+    assert workflow["node_meta"]["follow_cube"]["params"]["armed"] is True
     assert workflow["node_meta"]["follow_cube"]["params"]["host"] == "127.0.0.1"
     assert workflow["node_meta"]["follow_cube"]["params"]["port"] == 9090
     assert workflow["node_meta"]["follow_cube"]["params"]["frame_width"] == 640
@@ -138,7 +141,7 @@ def test_cube_continuous_template_uses_generic_setup_nodes():
     assert workflow["node_meta"]["cv2_stream"]["params"]["show_follow_guides"] is True
     assert workflow["node_meta"]["cv2_stream"]["params"]["follow_target_x"] == 0.4
     assert workflow["node_meta"]["cv2_stream"]["params"]["follow_deadband"] == 0.03
-    assert ("stream", "snapshot_url", "cv2_stream", "source_url") in edges
+    assert ("stream", "frame_stream", "cv2_stream", "frame_stream") in edges
     assert ("cv2_stream", "detection", "follow_cube", "detection") in edges
     assert ("cv2_stream", "detection_stream", "follow_cube", "detection_stream") in edges
     assert ("cv2_stream", "detection_url", "follow_cube", "detection_url") not in edges
@@ -152,9 +155,8 @@ def test_cube_continuous_template_uses_generic_setup_nodes():
 
 def test_templates_declare_required_adapter():
     for name in [
-        "vision-cv2-cube-local-reasoning.json",
-        "vision-cv2-cube-ros2-native-reasoning.json",
-        "vision-cv2-cube-rosbridge-reasoning.json",
+        "cube-follow-local-camera.json",
+        "cube-follow-ros2-camera.json",
     ]:
         workflow = json.loads((TEMPLATE_DIR / name).read_text(encoding="utf-8"))
         assert workflow["metadata"]["required_adapters"] == ["blacknode-skills/follow-person@ros2"]

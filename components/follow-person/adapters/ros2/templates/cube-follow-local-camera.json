@@ -1,15 +1,15 @@
 {
   "kind": "blacknode.workflow",
   "schema_version": 1,
-  "name": "CV2 Cube ROS 2 Camera Follow",
+  "name": "Cube Follow — Local Camera",
   "saved_at": "2026-07-13T00:00:00",
   "entrypoint": {
-    "node_id": "overlay_out",
-    "port": "image"
+    "node_id": "cv2_stream",
+    "port": "preview"
   },
   "metadata": {
     "template": true,
-    "description": "Start the bundled ROS 2 USB camera publisher, stream /camera/image_raw, resolve a target into HSV, show live CV2 reasoning, and follow the tracked cube through the automatically selected robot transport.",
+    "description": "Open the local USB camera, colour-track a cube with TrackingObject plus live Qwen reasoning, and continuously follow it with the SO-ARM101 shoulder_pan. Armed on start — the arm moves as soon as you cook the graph.",
     "color": "#2563eb",
     "required_adapters": [
       "blacknode-skills/follow-person@ros2"
@@ -19,26 +19,24 @@
         "name": "blacknode-perception",
         "git_url": "https://github.com/temiroff/blacknode-perception.git",
         "node_types": [
-          "CV2ColorObjectStream",
-          "CV2ColorObjectTracker",
-          "CV2HSVMask",
-          "ReasoningStream",
-          "CameraROS2Subscribe"
+          "Camera",
+          "TrackingObject",
+          "TrackingColorMask",
+          "ReasoningStream"
         ]
       },
       {
         "name": "blacknode-ros2",
         "git_url": "https://github.com/temiroff/blacknode-ros2.git",
         "node_types": [
-          "ROS2SystemCheck",
-          "ROS2Run"
+          "ROS2Status"
         ]
       },
       {
         "name": "blacknode-skills",
         "git_url": "https://github.com/temiroff/blacknode-skills.git",
         "node_types": [
-          "ROS2FollowDetectionJoint"
+          "RobotFollow"
         ]
       },
       {
@@ -68,120 +66,71 @@
   "node_meta": {
     "check": {
       "id": "check",
-      "type": "ROS2SystemCheck",
+      "type": "ROS2Status",
       "params": {
-        "refresh": true
+        "action": "ensure",
+        "host": "127.0.0.1",
+        "port": 9090,
+        "timeout": 180.0
       },
       "pos": [
-        80,
-        1451
+        80.0,
+        1451.0
       ],
       "inputs": [
-        "refresh"
-      ],
-      "outputs": [
-        "available",
-        "backend",
-        "report"
-      ],
-      "input_types": {
-        "refresh": "Bool"
-      },
-      "output_types": {
-        "available": "Bool",
-        "backend": "Text",
-        "report": "Text"
-      },
-      "input_defaults": {
-        "refresh": true
-      }
-    },
-    "camera_run": {
-      "id": "camera_run",
-      "type": "ROS2Run",
-      "params": {
-        "action": "start",
-        "run_id": "vision_camera",
-        "package": "perception_camera",
-        "executable": "usb_camera",
-        "arguments": "--ros-args -p device:=0 -p image_topic:=/camera/image_raw -p width:=640 -p height:=480 -p hz:=30.0",
-        "expected_topic": "/camera/image_raw",
-        "wait_seconds": 10
-      },
-      "pos": [
-        390,
-        1598
-      ],
-      "inputs": [
-        "trigger",
         "action",
-        "run_id",
-        "package",
-        "executable",
-        "arguments",
-        "expected_topic",
-        "wait_seconds"
+        "host",
+        "port",
+        "timeout"
       ],
       "outputs": [
-        "running",
-        "run_id",
+        "ready",
         "report"
       ],
       "input_types": {
-        "trigger": "Any",
         "action": "Text",
-        "run_id": "Text",
-        "package": "Text",
-        "executable": "Text",
-        "arguments": "Text",
-        "expected_topic": "Text",
-        "wait_seconds": "Float"
+        "host": "Text",
+        "port": "Int",
+        "timeout": "Float"
       },
       "output_types": {
-        "running": "Bool",
-        "run_id": "Text",
+        "ready": "Bool",
         "report": "Text"
       },
       "input_defaults": {
-        "action": "start",
-        "run_id": "vision_camera",
-        "package": "perception_camera",
-        "executable": "usb_camera",
-        "arguments": "--ros-args -p device:=0 -p image_topic:=/camera/image_raw -p width:=640 -p height:=480 -p hz:=30.0",
-        "expected_topic": "/camera/image_raw",
-        "wait_seconds": 10
-      },
-      "input_choices": {
-        "action": [
-          "start",
-          "stop"
-        ]
+        "action": "ensure",
+        "host": "127.0.0.1",
+        "port": 9090,
+        "timeout": 180.0
       }
     },
     "stream": {
       "id": "stream",
-      "type": "CameraROS2Subscribe",
+      "type": "Camera",
       "params": {
         "action": "start",
         "stream_id": "vision_camera",
-        "topic": "/camera/image_raw",
-        "message_type": "auto",
+        "selection": 0,
+        "width": 640,
+        "height": 480,
         "host": "127.0.0.1",
         "port": 0,
-        "max_fps": 10,
+        "max_fps": 15.0,
         "max_width": 960,
-        "jpeg_quality": 80
+        "jpeg_quality": 82
       },
       "pos": [
-        1000,
+        1000.0,
         1043.5
       ],
       "inputs": [
         "trigger",
         "action",
         "stream_id",
-        "topic",
-        "message_type",
+        "device",
+        "backend",
+        "width",
+        "height",
         "host",
         "port",
         "max_fps",
@@ -193,15 +142,19 @@
         "streaming",
         "stream_url",
         "snapshot_url",
+        "health_url",
         "stream_id",
-        "report"
+        "report",
+        "frame_stream"
       ],
       "input_types": {
         "trigger": "Any",
         "action": "Text",
         "stream_id": "Text",
-        "topic": "Text",
-        "message_type": "Text",
+        "device": "Text",
+        "backend": "Text",
+        "width": "Int",
+        "height": "Int",
         "host": "Text",
         "port": "Int",
         "max_fps": "Float",
@@ -213,29 +166,36 @@
         "streaming": "Bool",
         "stream_url": "Text",
         "snapshot_url": "Text",
+        "health_url": "Text",
         "stream_id": "Text",
-        "report": "Text"
+        "report": "Text",
+        "frame_stream": "Dict"
       },
       "input_defaults": {
         "action": "start",
         "stream_id": "vision_camera",
-        "topic": "/camera/image_raw",
-        "message_type": "auto",
+        "device": "0",
+        "backend": "auto",
+        "width": 640,
+        "height": 480,
         "host": "127.0.0.1",
         "port": 0,
-        "max_fps": 10,
+        "max_fps": 15.0,
         "max_width": 960,
-        "jpeg_quality": 80
+        "jpeg_quality": 82
       },
       "input_choices": {
         "action": [
           "start",
           "stop"
         ],
-        "message_type": [
+        "backend": [
           "auto",
-          "raw",
-          "compressed"
+          "dshow",
+          "msmf",
+          "v4l2",
+          "avfoundation",
+          "any"
         ]
       }
     },
@@ -261,7 +221,7 @@
     },
     "cv2_stream": {
       "id": "cv2_stream",
-      "type": "CV2ColorObjectStream",
+      "type": "TrackingObject",
       "params": {
         "action": "start",
         "stream_id": "cube_tracker",
@@ -270,7 +230,10 @@
         "use_reasoning_color": true,
         "target": "",
         "reasoning_state_url": "",
-        "target_update_seconds": 2,
+        "target_update_seconds": 2.0,
+        "show_follow_guides": true,
+        "follow_target_x": 0.4,
+        "follow_deadband": 0.03,
         "label": "cube",
         "min_area": 200,
         "max_detections": 3,
@@ -278,12 +241,12 @@
         "morphology_iters": 1,
         "host": "127.0.0.1",
         "port": 0,
-        "max_fps": 10,
+        "max_fps": 10.0,
         "max_width": 960,
         "jpeg_quality": 82
       },
       "pos": [
-        2700,
+        2700.0,
         733.5
       ],
       "inputs": [
@@ -291,11 +254,15 @@
         "action",
         "stream_id",
         "source_url",
+        "frame_stream",
         "object_color",
         "use_reasoning_color",
         "target",
         "reasoning_state_url",
         "target_update_seconds",
+        "show_follow_guides",
+        "follow_target_x",
+        "follow_deadband",
         "label",
         "min_area",
         "max_detections",
@@ -316,6 +283,7 @@
         "snapshot_url",
         "mask_stream_url",
         "mask_url",
+        "detection_stream",
         "detection_url",
         "stream_id",
         "found",
@@ -333,6 +301,9 @@
         "target": "Text",
         "reasoning_state_url": "Text",
         "target_update_seconds": "Float",
+        "show_follow_guides": "Bool",
+        "follow_target_x": "Float",
+        "follow_deadband": "Float",
         "label": "Text",
         "min_area": "Int",
         "max_detections": "Int",
@@ -342,7 +313,8 @@
         "port": "Int",
         "max_fps": "Float",
         "max_width": "Int",
-        "jpeg_quality": "Int"
+        "jpeg_quality": "Int",
+        "frame_stream": "Dict"
       },
       "output_types": {
         "preview": "Image",
@@ -353,6 +325,7 @@
         "snapshot_url": "Text",
         "mask_stream_url": "Text",
         "mask_url": "Text",
+        "detection_stream": "Dict",
         "detection_url": "Text",
         "stream_id": "Text",
         "found": "Bool",
@@ -368,7 +341,10 @@
         "use_reasoning_color": true,
         "target": "",
         "reasoning_state_url": "",
-        "target_update_seconds": 2,
+        "target_update_seconds": 2.0,
+        "show_follow_guides": true,
+        "follow_target_x": 0.4,
+        "follow_deadband": 0.03,
         "label": "cube",
         "min_area": 300,
         "max_detections": 3,
@@ -376,9 +352,10 @@
         "morphology_iters": 1,
         "host": "127.0.0.1",
         "port": 0,
-        "max_fps": 10,
+        "max_fps": 10.0,
         "max_width": 960,
-        "jpeg_quality": 82
+        "jpeg_quality": 82,
+        "frame_stream": {}
       },
       "input_choices": {
         "action": [
@@ -387,50 +364,6 @@
         ]
       }
     },
-    "stream_out": {
-      "id": "stream_out",
-      "type": "OutputImage",
-      "params": {},
-      "pos": [
-        1850,
-        1608.5
-      ],
-      "inputs": [
-        "image"
-      ],
-      "outputs": [
-        "image"
-      ],
-      "input_types": {
-        "image": "Image"
-      },
-      "output_types": {
-        "image": "Image"
-      },
-      "input_defaults": {}
-    },
-    "overlay_out": {
-      "id": "overlay_out",
-      "type": "OutputImage",
-      "params": {},
-      "pos": [
-        3550,
-        1991
-      ],
-      "inputs": [
-        "image"
-      ],
-      "outputs": [
-        "image"
-      ],
-      "input_types": {
-        "image": "Image"
-      },
-      "output_types": {
-        "image": "Image"
-      },
-      "input_defaults": {}
-    },
     "detection_out": {
       "id": "detection_out",
       "type": "Output",
@@ -438,8 +371,8 @@
         "label": "CV2 detection"
       },
       "pos": [
-        3550,
-        2663
+        3550.0,
+        2663.0
       ],
       "inputs": [
         "value"
@@ -449,50 +382,6 @@
         "value": "Any"
       },
       "output_types": {},
-      "input_defaults": {}
-    },
-    "mask_out": {
-      "id": "mask_out",
-      "type": "OutputImage",
-      "params": {},
-      "pos": [
-        3550,
-        1319
-      ],
-      "inputs": [
-        "image"
-      ],
-      "outputs": [
-        "image"
-      ],
-      "input_types": {
-        "image": "Image"
-      },
-      "output_types": {
-        "image": "Image"
-      },
-      "input_defaults": {}
-    },
-    "reason_dashboard_out": {
-      "id": "reason_dashboard_out",
-      "type": "OutputImage",
-      "params": {},
-      "pos": [
-        2700,
-        1599.5
-      ],
-      "inputs": [
-        "image"
-      ],
-      "outputs": [
-        "image"
-      ],
-      "input_types": {
-        "image": "Image"
-      },
-      "output_types": {
-        "image": "Image"
-      },
       "input_defaults": {}
     },
     "live_reason": {
@@ -509,15 +398,15 @@
         "api_key": "",
         "temperature": 0.2,
         "max_tokens": 4096,
-        "interval_seconds": 3,
+        "interval_seconds": 3.0,
         "host": "127.0.0.1",
         "port": 0,
-        "max_fps": 4,
+        "max_fps": 4.0,
         "max_width": 960,
         "title": "Blacknode Live Vision Reasoning"
       },
       "pos": [
-        1850,
+        1850.0,
         913.5
       ],
       "inputs": [
@@ -593,10 +482,10 @@
         "api_key": "",
         "temperature": 0.2,
         "max_tokens": 4096,
-        "interval_seconds": 3,
+        "interval_seconds": 3.0,
         "host": "127.0.0.1",
         "port": 0,
-        "max_fps": 4,
+        "max_fps": 4.0,
         "max_width": 960,
         "title": "Blacknode Live Vision Reasoning"
       },
@@ -612,25 +501,32 @@
     },
     "follow_cube": {
       "id": "follow_cube",
-      "type": "ROS2FollowDetectionJoint",
+      "type": "RobotFollow",
       "params": {
+        "action": "start",
+        "run_id": "cube_follow",
+        "loop_hz": 10.0,
+        "host": "127.0.0.1",
+        "port": 9090,
         "state_topic": "/joint_states",
         "command_topic": "/joint_commands",
         "config_topic": "/joint_config",
         "joint": "shoulder_pan",
         "units": "degrees",
-        "frame_width": 960,
-        "target_x": 0.5,
-        "deadband": 0.08,
-        "gain": 35,
-        "max_step": 8,
+        "frame_width": 640,
+        "target_x": 0.4,
+        "deadband": 0.03,
+        "gain": 4.0,
+        "max_step": 0.75,
         "invert": true,
-        "ramp_seconds": 0.35,
-        "hold_seconds": 0.2,
-        "rate_hz": 30,
+        "ramp_seconds": 0.25,
+        "hold_seconds": 0.05,
+        "rate_hz": 30.0,
         "armed": true,
-        "timeout": 10,
+        "timeout": 10.0,
         "robot": {},
+        "detection_stream": {},
+        "detection_timeout": 1.0,
         "detection_url": ""
       },
       "pos": [
@@ -639,9 +535,16 @@
       ],
       "inputs": [
         "trigger",
+        "action",
+        "run_id",
+        "loop_hz",
         "detection",
+        "detection_stream",
         "detection_url",
+        "detection_timeout",
         "robot",
+        "host",
+        "port",
         "state_topic",
         "command_topic",
         "config_topic",
@@ -660,6 +563,7 @@
         "timeout"
       ],
       "outputs": [
+        "running",
         "moved",
         "joint",
         "before",
@@ -671,7 +575,16 @@
       ],
       "input_types": {
         "trigger": "Any",
+        "action": "Text",
+        "run_id": "Text",
+        "loop_hz": "Float",
         "detection": "Dict",
+        "detection_stream": "Dict",
+        "detection_url": "Text",
+        "detection_timeout": "Float",
+        "robot": "Dict",
+        "host": "Text",
+        "port": "Int",
         "state_topic": "Text",
         "command_topic": "Text",
         "config_topic": "Text",
@@ -687,11 +600,10 @@
         "hold_seconds": "Float",
         "rate_hz": "Float",
         "armed": "Bool",
-        "timeout": "Float",
-        "robot": "Dict",
-        "detection_url": "Text"
+        "timeout": "Float"
       },
       "output_types": {
+        "running": "Bool",
         "moved": "Bool",
         "joint": "Text",
         "before": "Dict",
@@ -702,26 +614,38 @@
         "report": "Text"
       },
       "input_defaults": {
+        "action": "start",
+        "run_id": "vision_follow",
+        "loop_hz": 2.0,
+        "detection_stream": {},
+        "detection_url": "",
+        "detection_timeout": 1.0,
+        "host": "127.0.0.1",
+        "port": 9090,
         "state_topic": "/joint_states",
         "command_topic": "/joint_commands",
         "config_topic": "/joint_config",
-        "joint": "",
+        "joint": "shoulder_pan",
         "units": "degrees",
-        "frame_width": 640,
+        "frame_width": 960,
         "target_x": 0.5,
         "deadband": 0.08,
-        "gain": 35,
-        "max_step": 8,
-        "invert": false,
+        "gain": 35.0,
+        "max_step": 8.0,
+        "invert": true,
         "ramp_seconds": 0.35,
         "hold_seconds": 0.2,
-        "rate_hz": 30,
+        "rate_hz": 30.0,
         "armed": false,
-        "timeout": 10,
-        "robot": {},
-        "detection_url": ""
+        "timeout": 10.0,
+        "robot": {}
       },
       "input_choices": {
+        "action": [
+          "start",
+          "stop",
+          "check"
+        ],
         "units": [
           "radians",
           "degrees"
@@ -772,28 +696,6 @@
         "units": "degrees"
       }
     },
-    "robot_motion_out": {
-      "id": "robot_motion_out",
-      "type": "OutputImage",
-      "params": {},
-      "pos": [
-        4719.451676551366,
-        772.407297844604
-      ],
-      "inputs": [
-        "image"
-      ],
-      "outputs": [
-        "image"
-      ],
-      "input_types": {
-        "image": "Image"
-      },
-      "output_types": {
-        "image": "Image"
-      },
-      "input_defaults": {}
-    },
     "robot_report_out": {
       "id": "robot_report_out",
       "type": "Output",
@@ -801,7 +703,7 @@
         "label": "Robot follow report"
       },
       "pos": [
-        4400,
+        4400.0,
         1426.5
       ],
       "inputs": [
@@ -813,6 +715,168 @@
       },
       "output_types": {},
       "input_defaults": {}
+    },
+    "robot_profile_out": {
+      "id": "robot_profile_out",
+      "type": "Output",
+      "params": {
+        "label": "Robot profile"
+      },
+      "pos": [
+        1000.0,
+        1715.5
+      ],
+      "inputs": [
+        "value"
+      ],
+      "outputs": [],
+      "input_types": {
+        "value": "Any"
+      },
+      "output_types": {},
+      "input_defaults": {}
+    },
+    "robot_discovery_report_out": {
+      "id": "robot_discovery_report_out",
+      "type": "Output",
+      "params": {
+        "label": "Robot discovery report"
+      },
+      "pos": [
+        1000.0,
+        1967.5
+      ],
+      "inputs": [
+        "value"
+      ],
+      "outputs": [],
+      "input_types": {
+        "value": "Any"
+      },
+      "output_types": {},
+      "input_defaults": {}
+    },
+    "cuda_filter": {
+      "id": "cuda_filter",
+      "type": "CUDAImageFilterStream",
+      "params": {
+        "op": "sobel_edges"
+      },
+      "pos": [
+        4386.265842578224,
+        1749.714587621147
+      ],
+      "inputs": [
+        "trigger",
+        "action",
+        "stream_id",
+        "source_url",
+        "op",
+        "amount",
+        "host",
+        "port",
+        "max_fps",
+        "max_width",
+        "jpeg_quality"
+      ],
+      "outputs": [
+        "preview",
+        "streaming",
+        "stream_url",
+        "snapshot_url",
+        "stream_id",
+        "report"
+      ],
+      "input_types": {
+        "trigger": "Any",
+        "action": "Text",
+        "stream_id": "Text",
+        "source_url": "Text",
+        "op": "Text",
+        "amount": "Float",
+        "host": "Text",
+        "port": "Int",
+        "max_fps": "Float",
+        "max_width": "Int",
+        "jpeg_quality": "Int"
+      },
+      "output_types": {
+        "preview": "Image",
+        "streaming": "Bool",
+        "stream_url": "Text",
+        "snapshot_url": "Text",
+        "stream_id": "Text",
+        "report": "Text"
+      },
+      "input_defaults": {
+        "action": "start",
+        "stream_id": "cuda_filter",
+        "source_url": "",
+        "op": "grayscale",
+        "amount": 1.0,
+        "host": "127.0.0.1",
+        "port": 0,
+        "max_fps": 10.0,
+        "max_width": 960,
+        "jpeg_quality": 82
+      }
+    },
+    "joint_state": {
+      "id": "joint_state",
+      "type": "ROS2JointState",
+      "params": {
+        "host": "127.0.0.1",
+        "port": 9090,
+        "topic": "/joint_states",
+        "units": "degrees",
+        "timeout": 10.0
+      },
+      "pos": [
+        1000.0,
+        785.5
+      ],
+      "inputs": [
+        "trigger",
+        "robot",
+        "host",
+        "port",
+        "topic",
+        "units",
+        "timeout"
+      ],
+      "outputs": [
+        "pose",
+        "names",
+        "report"
+      ],
+      "input_types": {
+        "trigger": "Any",
+        "host": "Text",
+        "port": "Int",
+        "topic": "Text",
+        "units": "Text",
+        "timeout": "Float",
+        "robot": "Dict"
+      },
+      "output_types": {
+        "pose": "Dict",
+        "names": "List",
+        "report": "Text"
+      },
+      "input_defaults": {
+        "host": "127.0.0.1",
+        "port": 9090,
+        "topic": "/joint_states",
+        "units": "degrees",
+        "timeout": 10.0,
+        "robot": {}
+      },
+      "input_choices": {
+        "units": [
+          "radians",
+          "degrees"
+        ]
+      }
     },
     "robot": {
       "id": "robot",
@@ -831,8 +895,8 @@
         "driver": {}
       },
       "pos": [
-        390,
-        995
+        390.0,
+        995.0
       ],
       "inputs": [
         "trigger",
@@ -915,53 +979,13 @@
         ]
       }
     },
-    "robot_profile_out": {
-      "id": "robot_profile_out",
-      "type": "Output",
-      "params": {
-        "label": "Detected robot profile"
-      },
-      "pos": [
-        1000,
-        1715.5
-      ],
-      "inputs": [
-        "value"
-      ],
-      "outputs": [],
-      "input_types": {
-        "value": "Any"
-      },
-      "output_types": {},
-      "input_defaults": {}
-    },
-    "robot_discovery_report_out": {
-      "id": "robot_discovery_report_out",
-      "type": "Output",
-      "params": {
-        "label": "Robot discovery report"
-      },
-      "pos": [
-        1000,
-        1967.5
-      ],
-      "inputs": [
-        "value"
-      ],
-      "outputs": [],
-      "input_types": {
-        "value": "Any"
-      },
-      "output_types": {},
-      "input_defaults": {}
-    },
-    "cuda_filter_out": {
-      "id": "cuda_filter_out",
+    "mask_out": {
+      "id": "mask_out",
       "type": "OutputImage",
       "params": {},
       "pos": [
-        4695.203055392731,
-        1679.2369656974943
+        3220.0,
+        1113.5
       ],
       "inputs": [
         "image"
@@ -974,139 +998,6 @@
       },
       "output_types": {
         "image": "Image"
-      },
-      "input_defaults": {}
-    },
-    "cuda_filter": {
-      "id": "cuda_filter",
-      "type": "CUDAImageFilterStream",
-      "params": {
-        "op": "sobel_edges"
-      },
-      "pos": [
-        4386.265842578224,
-        1749.714587621147
-      ],
-      "inputs": [
-        "trigger",
-        "action",
-        "stream_id",
-        "source_url",
-        "op",
-        "amount",
-        "host",
-        "port",
-        "max_fps",
-        "max_width",
-        "jpeg_quality"
-      ],
-      "outputs": [
-        "preview",
-        "streaming",
-        "stream_url",
-        "snapshot_url",
-        "stream_id",
-        "report"
-      ],
-      "input_types": {
-        "trigger": "Any",
-        "action": "Text",
-        "stream_id": "Text",
-        "source_url": "Text",
-        "op": "Text",
-        "amount": "Float",
-        "host": "Text",
-        "port": "Int",
-        "max_fps": "Float",
-        "max_width": "Int",
-        "jpeg_quality": "Int"
-      },
-      "output_types": {
-        "preview": "Image",
-        "streaming": "Bool",
-        "stream_url": "Text",
-        "snapshot_url": "Text",
-        "stream_id": "Text",
-        "report": "Text"
-      },
-      "input_defaults": {
-        "action": "start",
-        "stream_id": "cuda_filter",
-        "source_url": "",
-        "op": "grayscale",
-        "amount": 1,
-        "host": "127.0.0.1",
-        "port": 0,
-        "max_fps": 10,
-        "max_width": 960,
-        "jpeg_quality": 82
-      }
-    },
-    "joint_state": {
-      "id": "joint_state",
-      "type": "ROS2JointState",
-      "params": {
-        "topic": "/joint_states",
-        "units": "degrees",
-        "timeout": 10
-      },
-      "pos": [
-        1000,
-        785.5
-      ],
-      "inputs": [
-        "trigger",
-        "topic",
-        "units",
-        "timeout"
-      ],
-      "outputs": [
-        "pose",
-        "names",
-        "report"
-      ],
-      "input_types": {
-        "trigger": "Any",
-        "topic": "Text",
-        "units": "Text",
-        "timeout": "Float"
-      },
-      "output_types": {
-        "pose": "Dict",
-        "names": "List",
-        "report": "Text"
-      },
-      "input_defaults": {
-        "topic": "/joint_states",
-        "units": "radians",
-        "timeout": 10
-      }
-    },
-    "shoulder_pan_index": {
-      "id": "shoulder_pan_index",
-      "type": "ListIndex",
-      "params": {
-        "index": 0
-      },
-      "pos": [
-        1850,
-        724.5
-      ],
-      "inputs": [
-        "items",
-        "index"
-      ],
-      "outputs": [
-        "value",
-        "found"
-      ],
-      "input_types": {
-        "items": "List",
-        "index": "Int"
-      },
-      "output_types": {
-        "value": "Any",
-        "found": "Bool"
       },
       "input_defaults": {}
     }
@@ -1115,50 +1006,20 @@
     {
       "from": "check",
       "from_port": "report",
-      "to": "camera_run",
-      "to_port": "trigger"
-    },
-    {
-      "from": "camera_run",
-      "from_port": "report",
       "to": "stream",
       "to_port": "trigger"
     },
     {
       "from": "stream",
-      "from_port": "preview",
-      "to": "stream_out",
-      "to_port": "image"
-    },
-    {
-      "from": "stream",
       "from_port": "report",
       "to": "cv2_stream",
       "to_port": "trigger"
-    },
-    {
-      "from": "stream",
-      "from_port": "snapshot_url",
-      "to": "cv2_stream",
-      "to_port": "source_url"
     },
     {
       "from": "target_prompt",
       "from_port": "value",
       "to": "live_reason",
       "to_port": "prompt"
-    },
-    {
-      "from": "cv2_stream",
-      "from_port": "preview",
-      "to": "overlay_out",
-      "to_port": "image"
-    },
-    {
-      "from": "cv2_stream",
-      "from_port": "mask",
-      "to": "mask_out",
-      "to_port": "image"
     },
     {
       "from": "cv2_stream",
@@ -1177,12 +1038,6 @@
       "from_port": "snapshot_url",
       "to": "live_reason",
       "to_port": "image_url"
-    },
-    {
-      "from": "live_reason",
-      "from_port": "preview",
-      "to": "reason_dashboard_out",
-      "to_port": "image"
     },
     {
       "from": "cv2_stream",
@@ -1227,16 +1082,40 @@
       "to_port": "moved"
     },
     {
-      "from": "robot_motion_dashboard",
-      "from_port": "dashboard",
-      "to": "robot_motion_out",
-      "to_port": "image"
-    },
-    {
       "from": "follow_cube",
       "from_port": "report",
       "to": "robot_report_out",
       "to_port": "value"
+    },
+    {
+      "from": "cv2_stream",
+      "from_port": "detection_stream",
+      "to": "follow_cube",
+      "to_port": "detection_stream"
+    },
+    {
+      "from": "live_reason",
+      "from_port": "state_url",
+      "to": "cv2_stream",
+      "to_port": "reasoning_state_url"
+    },
+    {
+      "from": "stream",
+      "from_port": "snapshot_url",
+      "to": "cuda_filter",
+      "to_port": "source_url"
+    },
+    {
+      "from": "check",
+      "from_port": "report",
+      "to": "robot",
+      "to_port": "trigger"
+    },
+    {
+      "from": "robot",
+      "from_port": "report",
+      "to": "joint_state",
+      "to_port": "trigger"
     },
     {
       "from": "robot",
@@ -1257,58 +1136,28 @@
       "to_port": "value"
     },
     {
-      "from": "cv2_stream",
-      "from_port": "detection_url",
-      "to": "follow_cube",
-      "to_port": "detection_url"
-    },
-    {
       "from": "robot",
       "from_port": "report",
       "to": "robot_discovery_report_out",
       "to_port": "value"
     },
     {
-      "from": "check",
-      "from_port": "report",
-      "to": "robot",
-      "to_port": "trigger"
+      "from": "stream",
+      "from_port": "frame_stream",
+      "to": "cv2_stream",
+      "to_port": "frame_stream"
     },
     {
-      "from": "cuda_filter",
-      "from_port": "preview",
-      "to": "cuda_filter_out",
+      "from": "cv2_stream",
+      "from_port": "mask",
+      "to": "mask_out",
       "to_port": "image"
     },
     {
-      "from": "live_reason",
-      "from_port": "state_url",
-      "to": "cv2_stream",
-      "to_port": "reasoning_state_url"
-    },
-    {
       "from": "robot",
-      "from_port": "report",
+      "from_port": "robot",
       "to": "joint_state",
-      "to_port": "trigger"
-    },
-    {
-      "from": "joint_state",
-      "from_port": "names",
-      "to": "shoulder_pan_index",
-      "to_port": "items"
-    },
-    {
-      "from": "shoulder_pan_index",
-      "from_port": "value",
-      "to": "follow_cube",
-      "to_port": "joint"
-    },
-    {
-      "from": "stream",
-      "from_port": "snapshot_url",
-      "to": "cuda_filter",
-      "to_port": "source_url"
+      "to_port": "robot"
     }
   ]
 }

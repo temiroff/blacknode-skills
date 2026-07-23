@@ -1,7 +1,7 @@
 """Background visual-follow service shared by the ROS 2 follow-person adapter.
 
 Owns the persistent visual-servo loop (long-lived detection, joint-state, and
-command streams) started by ``ROS2ContinuousFollowDetectionJoint``. The node
+command streams) started by ``RobotFollow``. The node
 module stays a thin dispatcher; this module owns run state, the worker
 thread, and lifecycle (start/stop/status) so it can be reached from Stop All
 without importing node-decorated code.
