@@ -522,7 +522,7 @@
         "ramp_seconds": 0.25,
         "hold_seconds": 0.05,
         "rate_hz": 30.0,
-        "armed": true,
+        "armed": false,
         "timeout": 10.0,
         "robot": {},
         "detection_stream": {},
@@ -1000,9 +1000,36 @@
         "image": "Image"
       },
       "input_defaults": {}
+    },
+    "armed": {
+      "id": "armed",
+      "type": "Bool",
+      "params": {
+        "value": false,
+        "label": "Armed"
+      },
+      "pos": [
+        3250,
+        230
+      ],
+      "inputs": [],
+      "outputs": [
+        "value"
+      ],
+      "input_types": {},
+      "output_types": {
+        "value": "Bool"
+      },
+      "input_defaults": {}
     }
   },
   "edges": [
+    {
+      "from": "armed",
+      "from_port": "value",
+      "to": "follow_cube",
+      "to_port": "armed"
+    },
     {
       "from": "check",
       "from_port": "report",

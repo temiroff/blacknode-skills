@@ -435,7 +435,7 @@
         "stale_after": 0.75,
         "require_calibration": true,
         "require_leader_released": true,
-        "armed": true,
+        "armed": false,
         "timeout": 10.0
       },
       "inputs": [
@@ -565,9 +565,36 @@
       },
       "output_types": {},
       "input_defaults": {}
+    },
+    "armed": {
+      "id": "armed",
+      "type": "Bool",
+      "params": {
+        "value": false,
+        "label": "Armed"
+      },
+      "pos": [
+        1440,
+        360
+      ],
+      "inputs": [],
+      "outputs": [
+        "value"
+      ],
+      "input_types": {},
+      "output_types": {
+        "value": "Bool"
+      },
+      "input_defaults": {}
     }
   },
   "edges": [
+    {
+      "from": "armed",
+      "from_port": "value",
+      "to": "follow",
+      "to_port": "armed"
+    },
     {
       "from": "rosbridge",
       "from_port": "report",

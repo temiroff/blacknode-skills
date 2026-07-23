@@ -62,7 +62,10 @@ def test_cube_template_uses_live_cv2_stream_and_qwen3():
     assert workflow["node_meta"]["follow_cube"]["params"]["action"] == "start"
     assert workflow["node_meta"]["follow_cube"]["params"]["loop_hz"] == 10.0
     assert workflow["node_meta"]["follow_cube"]["params"]["joint"] == "shoulder_pan"
-    assert workflow["node_meta"]["follow_cube"]["params"]["armed"] is True
+    assert workflow["node_meta"]["follow_cube"]["params"]["armed"] is False
+    assert workflow["node_meta"]["armed"]["type"] == "Bool"
+    assert workflow["node_meta"]["armed"]["params"] == {"value": False, "label": "Armed"}
+    assert ("armed", "value", "follow_cube", "armed") in edges
     assert workflow["node_meta"]["follow_cube"]["params"]["frame_width"] == 640
     assert workflow["node_meta"]["follow_cube"]["params"]["target_x"] == 0.4
     assert workflow["node_meta"]["follow_cube"]["params"]["deadband"] == 0.03
@@ -130,7 +133,10 @@ def test_cube_continuous_template_uses_generic_setup_nodes():
     assert node_types["follow_cube"] == "RobotFollow"
     assert workflow["node_meta"]["follow_cube"]["params"]["action"] == "start"
     assert workflow["node_meta"]["follow_cube"]["params"]["loop_hz"] == 10.0
-    assert workflow["node_meta"]["follow_cube"]["params"]["armed"] is True
+    assert workflow["node_meta"]["follow_cube"]["params"]["armed"] is False
+    assert workflow["node_meta"]["armed"]["type"] == "Bool"
+    assert workflow["node_meta"]["armed"]["params"] == {"value": False, "label": "Armed"}
+    assert ("armed", "value", "follow_cube", "armed") in edges
     assert workflow["node_meta"]["follow_cube"]["params"]["host"] == "127.0.0.1"
     assert workflow["node_meta"]["follow_cube"]["params"]["port"] == 9090
     assert workflow["node_meta"]["follow_cube"]["params"]["frame_width"] == 640
