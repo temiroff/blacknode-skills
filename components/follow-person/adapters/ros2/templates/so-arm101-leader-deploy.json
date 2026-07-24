@@ -6,7 +6,7 @@
   "entrypoint": {"node_id": "out", "port": "value"},
   "metadata": {
     "template": true,
-    "description": "Deploy one calibrated SO-ARM leader. It starts the selected robot on a dedicated rosbridge endpoint, releases torque for hand guidance, and exposes leader pose on TCP 9091 for the paired follower deployment.",
+    "description": "Deploy one calibrated SO-ARM leader to its paired hardware device. Deployment binds the Robot to that device's exact USB serial path, starts a dedicated rosbridge endpoint, releases torque for hand guidance, and exposes leader pose on TCP 9091 for the paired follower deployment.",
     "color": "#14b8a6",
     "required_capabilities": ["joint_group", "position_feedback", "servo_bus"],
     "required_packages": ["blacknode-skills", "blacknode-robot", "blacknode-drivers", "blacknode-controllers", "blacknode-ros2"],
@@ -49,20 +49,6 @@
       "outputs": ["value"],
       "input_types": {},
       "output_types": {"value": "Bool"},
-      "input_defaults": {}
-    },
-    "leader_robot_index": {
-      "id": "leader_robot_index",
-      "type": "Int",
-      "pos": [300, 20],
-      "params": {
-        "value": 0,
-        "label": "Leader robot index (0 = first USB robot)"
-      },
-      "inputs": [],
-      "outputs": ["value"],
-      "input_types": {},
-      "output_types": {"value": "Int"},
       "input_defaults": {}
     },
     "leader_robot": {
@@ -128,7 +114,6 @@
   },
   "edges": [
     {"from": "share_on_lan", "from_port": "value", "to": "leader_bridge", "to_port": "expose_lan"},
-    {"from": "leader_robot_index", "from_port": "value", "to": "leader_robot", "to_port": "selection"},
     {"from": "leader_bridge", "from_port": "report", "to": "leader_robot", "to_port": "trigger"},
     {"from": "leader_robot", "from_port": "robot", "to": "release_leader", "to_port": "robot"},
     {"from": "leader_robot", "from_port": "report", "to": "release_leader", "to_port": "trigger"},
