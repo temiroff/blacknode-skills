@@ -1,11 +1,13 @@
 import json
 from pathlib import Path
+from unittest.mock import patch
 
 from blacknode.packages import load_package
 
 
 def test_skills_layer_catalog_loads_with_components_disabled():
-    info = load_package(Path(__file__).resolve().parents[1])
+    with patch("blacknode.packages._read_component_overrides", return_value=({}, "")):
+        info = load_package(Path(__file__).resolve().parents[1])
     assert info.ok
     assert info.layer == "skills"
     assert info.component_mode is True
@@ -26,3 +28,29 @@ def test_follow_person_ros2_template_declares_every_adapter_it_uses():
         "blacknode-controllers/joint-control@ros2",
     ]
     assert workflow["node_meta"]["follow"]["type"] == "ROS2LeaderFollower"
+
+
+def test_split_leader_follower_templates_are_one_robot_deployments():
+    template_dir = (
+        Path(__file__).resolve().parents[1]
+        / "components" / "follow-person" / "adapters" / "ros2" / "templates"
+    )
+    leader = json.loads(
+        (template_dir / "so-arm101-leader-deploy.json").read_text(encoding="utf-8")
+    )
+    follower = json.loads(
+        (template_dir / "so-arm102-follower-deploy.json").read_text(encoding="utf-8")
+    )
+
+    assert leader["name"] == "SO-ARM101 Leader Deploy"
+    assert follower["name"] == "SO-ARM102 Follower Deploy"
+    assert sum(
+        node["type"] == "Robot" for node in leader["node_meta"].values()
+    ) == 1
+    assert sum(
+        node["type"] == "Robot" for node in follower["node_meta"].values()
+    ) == 1
+    assert leader["node_meta"]["leader_bridge"]["params"]["port"] == 9091
+    assert leader["node_meta"]["leader_bridge"]["params"]["expose_lan"] is True
+    assert follower["node_meta"]["follow"]["params"]["leader_port"] == 9091
+    assert follower["node_meta"]["follow"]["params"]["armed"] is False

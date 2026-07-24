@@ -454,6 +454,80 @@ def test_leader_follower_blocks_same_usb_device(monkeypatch):
     assert "same USB device" in result["report"]
 
 
+def test_remote_leader_uses_separate_rosbridge_endpoint(monkeypatch):
+    class FakeSession:
+        def __init__(self, pose, config):
+            self.pose = pose
+            self.config = config
+            self.published = []
+
+        def snapshot(self):
+            return self.pose, self.config, 0.01
+
+        def wait_for_pose(self, timeout):
+            return self.pose
+
+        def wait_for_config(self, timeout):
+            return self.config
+
+        def publish(self, pose):
+            self.published.append(dict(pose))
+
+    leader_session = FakeSession(
+        {"shoulder_pan": 0.25},
+        {"torque_enabled": False},
+    )
+    follower_session = FakeSession(
+        {"shoulder_pan": 0.0},
+        {
+            "commands_allowed": True,
+            "joints": {"shoulder_pan": {"lower": -1.0, "upper": 1.0}},
+        },
+    )
+    acquired = []
+
+    def acquire(*signature, **kwargs):
+        acquired.append(signature)
+        return leader_session if signature[0] == "leader.local" else follower_session
+
+    monkeypatch.setattr(leader_follower_runtime, "_resolve_transport", lambda ctx: "rosbridge")
+    monkeypatch.setattr(rb, "acquire_joint_stream", acquire)
+    monkeypatch.setattr(rb, "release_joint_stream", lambda *args, **kwargs: None)
+    item = {
+        "leader_session": None,
+        "follower_session": None,
+        "leader_signature": None,
+        "follower_signature": None,
+    }
+    result = leader_follower_runtime._leader_follower_step(item, {
+        "armed": True,
+        "placement": "separate_devices",
+        "leader_host": "leader.local",
+        "leader_port": 9091,
+        "follower_host": "127.0.0.1",
+        "follower_port": 9090,
+        "follower_robot": {
+            "state_topic": "/follower/joint_states",
+            "command_topic": "/follower/joint_commands",
+            "config_topic": "/follower/joint_config",
+            "driver": {
+                "hardware_id": "FOLLOWER",
+                "profile": {
+                    "calibration": {"hardware_id": "FOLLOWER"},
+                },
+            },
+        },
+        "require_calibration": True,
+        "require_leader_released": True,
+        "tracking_mode": "direct",
+    })
+
+    assert result["commanded"] is True
+    assert acquired[0][:2] == ("leader.local", 9091)
+    assert acquired[1][:2] == ("127.0.0.1", 9090)
+    assert follower_session.published
+
+
 def test_leader_follower_resets_stale_side_and_recovers(monkeypatch):
     class FakeSession:
         def __init__(self, pose, config, age):

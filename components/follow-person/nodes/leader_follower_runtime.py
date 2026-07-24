@@ -38,6 +38,27 @@ def _resolve_transport(ctx: dict) -> str:
     return "native" if native_ok else "rosbridge"
 
 
+def _driver_is_calibrated(driver: dict[str, Any]) -> bool:
+    profile = driver.get("profile") if isinstance(driver.get("profile"), dict) else {}
+    calibration = (
+        profile.get("calibration")
+        if isinstance(profile.get("calibration"), dict)
+        else {}
+    )
+    return bool(driver.get("calibration_path") or calibration)
+
+
+def _endpoint(
+    ctx: dict[str, Any],
+    role: str,
+    fallback_host: str,
+    fallback_port: int,
+) -> tuple[str, int]:
+    host = str(ctx.get(f"{role}_host") or fallback_host)
+    requested_port = int(ctx.get(f"{role}_port") or 0)
+    return host, requested_port or fallback_port
+
+
 def _svg_text(value: Any, limit: int = 90) -> str:
     text = " ".join(str(value or "").split())
     if len(text) > limit:
@@ -174,12 +195,24 @@ def _leader_follower_step(item: dict[str, Any], ctx: dict[str, Any]) -> dict[str
     follower_driver = follower.get("driver") if isinstance(follower.get("driver"), dict) else {}
     leader_id = str(leader_driver.get("hardware_id") or "")
     follower_id = str(follower_driver.get("hardware_id") or "")
-    if not leader_id or not follower_id:
-        return _leader_follower_result(running=True, armed=armed, report="BLOCKED: both robots need USB hardware identities.")
-    if leader_id == follower_id:
+    remote_leader = not bool(leader)
+    if not follower_id:
+        return _leader_follower_result(
+            running=True,
+            armed=armed,
+            report="BLOCKED: the follower needs a USB hardware identity.",
+        )
+    if not remote_leader and not leader_id:
+        return _leader_follower_result(
+            running=True,
+            armed=armed,
+            report="BLOCKED: the leader needs a USB hardware identity.",
+        )
+    if leader_id and follower_id and leader_id == follower_id:
         return _leader_follower_result(running=True, armed=armed, report="BLOCKED: leader and follower resolve to the same USB device.")
     if bool(ctx.get("require_calibration", True)) and (
-        not leader_driver.get("calibration_path") or not follower_driver.get("calibration_path")
+        (not remote_leader and not _driver_is_calibrated(leader_driver))
+        or not _driver_is_calibrated(follower_driver)
     ):
         return _leader_follower_result(running=True, armed=armed, report="BLOCKED: save hardware calibration for both leader and follower.")
     if _resolve_transport(ctx) != "rosbridge":
@@ -187,8 +220,35 @@ def _leader_follower_step(item: dict[str, Any], ctx: dict[str, Any]) -> dict[str
 
     host = str(ctx.get("host") or leader.get("host") or follower.get("host") or "127.0.0.1")
     port = int(ctx.get("port") or leader.get("port") or follower.get("port") or 9090)
-    leader_signature = (host, port, str(leader.get("state_topic") or "/leader/joint_states"), str(leader.get("command_topic") or "/leader/joint_commands"), str(leader.get("config_topic") or "/leader/joint_config"))
-    follower_signature = (host, port, str(follower.get("state_topic") or "/follower/joint_states"), str(follower.get("command_topic") or "/follower/joint_commands"), str(follower.get("config_topic") or "/follower/joint_config"))
+    leader_host, leader_port = _endpoint(ctx, "leader", host, port)
+    follower_host, follower_port = _endpoint(ctx, "follower", host, port)
+    placement = str(ctx.get("placement") or "same_device").strip().lower()
+    if (
+        placement == "separate_devices"
+        and leader_host.strip().lower() in {"127.0.0.1", "localhost", "::1"}
+    ):
+        return _leader_follower_result(
+            running=True,
+            armed=armed,
+            report=(
+                "BLOCKED: separate_devices needs leader_host set to the leader "
+                "computer's LAN IP or hostname."
+            ),
+        )
+    leader_signature = (
+        leader_host,
+        leader_port,
+        str(leader.get("state_topic") or "/leader/joint_states"),
+        str(leader.get("command_topic") or "/leader/joint_commands"),
+        str(leader.get("config_topic") or "/leader/joint_config"),
+    )
+    follower_signature = (
+        follower_host,
+        follower_port,
+        str(follower.get("state_topic") or "/follower/joint_states"),
+        str(follower.get("command_topic") or "/follower/joint_commands"),
+        str(follower.get("config_topic") or "/follower/joint_config"),
+    )
     for role, signature in (("leader", leader_signature), ("follower", follower_signature)):
         if item.get(f"{role}_signature") != signature:
             rb.release_joint_stream(item.get(f"{role}_session"), discard=True)
@@ -308,7 +368,7 @@ def _leader_follower_step(item: dict[str, Any], ctx: dict[str, Any]) -> dict[str
         "live": True,
         "commanded": commanded,
         "clamped": list(clamped),
-        "leader_hardware_id": leader_id,
+        "leader_hardware_id": leader_id or f"remote:{leader_host}:{leader_port}",
         "follower_hardware_id": follower_id,
         "leader_calibration_path": str(leader_driver.get("calibration_path") or ""),
         "follower_calibration_path": str(follower_driver.get("calibration_path") or ""),
