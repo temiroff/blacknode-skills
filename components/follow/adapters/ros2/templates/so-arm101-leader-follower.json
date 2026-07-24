@@ -18,13 +18,13 @@
       "blacknode-ros2"
     ],
     "required_components": [
-      "blacknode-skills/follow-person",
+      "blacknode-skills/follow",
       "blacknode-robot/core",
       "blacknode-controllers/joint-control",
       "blacknode-ros2/core"
     ],
     "required_adapters": [
-      "blacknode-skills/follow-person@ros2",
+      "blacknode-skills/follow@ros2",
       "blacknode-controllers/joint-control@ros2"
     ]
   },

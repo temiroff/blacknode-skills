@@ -1,4 +1,4 @@
-"""Background visual-follow service shared by the ROS 2 follow-person adapter.
+"""Background visual-follow service shared by the ROS 2 follow adapter.
 
 Owns the persistent visual-servo loop (long-lived detection, joint-state, and
 command streams) started by ``RobotFollow``. The node

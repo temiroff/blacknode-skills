@@ -1,4 +1,4 @@
-"""ROS 2 follow-person adapter: visual-follow and leader/follower node contracts.
+"""ROS 2 follow adapter: visual-follow and leader/follower node contracts.
 
 Moved out of blacknode-ros2's ``ros2_live.py`` along with the node
 implementations themselves (see the embodied-robotics-roadmap Stage D item on
@@ -19,15 +19,15 @@ from blacknode.packages import _import_nodes_module, _tag_new_package_nodes
 from blacknode.pkg.blacknode_ros2 import ros2_native_runtime as nr
 from blacknode.pkg.blacknode_ros2 import rosbridge_runtime as rb
 
-_SKILLS_ROOT = Path(__file__).resolve().parents[1] / "components" / "follow-person"
+_SKILLS_ROOT = Path(__file__).resolve().parents[1] / "components" / "follow"
 _NODES = _SKILLS_ROOT / "nodes"
 _ADAPTER_NODES = _SKILLS_ROOT / "adapters" / "ros2" / "nodes"
 _before = dict(_NODE_REGISTRY)
-_import_nodes_module("blacknode.pkg.blacknode_skills.follow_person", _NODES)
-_import_nodes_module("blacknode.pkg.blacknode_skills.follow_person.adapters.ros2", _ADAPTER_NODES)
-_tag_new_package_nodes(_before, "blacknode-skills", _ADAPTER_NODES, "follow-person", "ros2")
+_import_nodes_module("blacknode.pkg.blacknode_skills.follow", _NODES)
+_import_nodes_module("blacknode.pkg.blacknode_skills.follow.adapters.ros2", _ADAPTER_NODES)
+_tag_new_package_nodes(_before, "blacknode-skills", _ADAPTER_NODES, "follow", "ros2")
 
-from blacknode.pkg.blacknode_skills.follow_person import follow_runtime, leader_follower_runtime
+from blacknode.pkg.blacknode_skills.follow import follow_runtime, leader_follower_runtime
 
 
 def test_follow_person_ros2_nodes_registered_with_category():

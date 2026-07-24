@@ -5,12 +5,13 @@ robot, perception, controller, and agent capabilities. Skills must not import
 vendor SDKs or bind directly to device paths. Components begin disabled until
 their executable nodes and dependency declarations are added.
 
-Planned components: `pick-place`, `follow-person`, `delivery`, `docking`, and
+Planned components: `pick-place`, `follow`, `delivery`, `docking`, and
 `inspection`.
 
 ## Split leader and follower deployment
 
-The follow-person ROS 2 adapter ships two one-robot deployment templates:
+The follow ROS 2 adapter ships visual-follow and leader/follower nodes, plus
+two one-robot deployment templates:
 
 - **SO-ARM101 Leader Deploy** starts the selected leader robot, releases its
   torque for hand guidance, and publishes its joint stream on ROS 2.

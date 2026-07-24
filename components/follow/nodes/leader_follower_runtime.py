@@ -1,4 +1,4 @@
-"""Background leader/follower teleoperation service shared by the ROS 2 follow-person adapter.
+"""Background leader/follower teleoperation service shared by the ROS 2 follow adapter.
 
 Owns the persistent leader-pose-to-follower-pose streaming loop started by
 ``ROS2LeaderFollower``. The node module stays a thin dispatcher; this module

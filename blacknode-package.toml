@@ -1,6 +1,6 @@
 [package]
 name = "blacknode-skills"
-version = "0.1.1"
+version = "0.2.0"
 description = "Reusable task-level robot skills composed from stable Blacknode capabilities."
 requires-blacknode = ">=0.3.0"
 layer = "skills"
@@ -14,29 +14,30 @@ description = "Capability-driven pick and place skill."
 default = false
 capabilities = ["skill.pick-place"]
 
-[components.follow-person]
-description = "Capability-driven person following skill."
+[components.follow]
+aliases = ["follow-person"]
+description = "Capability-driven visual and robot following skills."
 default = false
-capabilities = ["skill.follow-person"]
-nodes = ["components/follow-person/nodes"]
+capabilities = ["skill.follow"]
+nodes = ["components/follow/nodes"]
 
-[components.follow-person.dependencies]
+[components.follow.dependencies]
 requires = [
   { package = "blacknode-ros2", component = "core", version = ">=0.5.3,<1.0.0" },
 ]
 
-[components.follow-person.adapters.ros2]
+[components.follow.adapters.ros2]
 description = "Visual-follow and leader/follower node implementations and composition templates over ROS 2 transports."
 default = false
-capabilities = ["adapter.skill.follow-person.ros2"]
-nodes = ["components/follow-person/adapters/ros2/nodes"]
-templates = ["components/follow-person/adapters/ros2/templates"]
+capabilities = ["adapter.skill.follow.ros2"]
+nodes = ["components/follow/adapters/ros2/nodes"]
+templates = ["components/follow/adapters/ros2/templates"]
 node-types = [
   "RobotFollow", "ROS2FollowDetectionJoint", "ROS2LeaderFollower",
   "ROS2NativeFollowDetectionJoint"
 ]
 
-[components.follow-person.adapters.ros2.dependencies]
+[components.follow.adapters.ros2.dependencies]
 requires = [
   { package = "blacknode-robot", component = "core", version = ">=0.2.0,<1.0.0" },
   { package = "blacknode-ros2", component = "core", version = ">=0.5.3,<1.0.0" },

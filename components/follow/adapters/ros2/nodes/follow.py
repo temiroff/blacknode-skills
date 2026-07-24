@@ -3,7 +3,7 @@
 ``ROS2NativeFollowDetectionJoint`` and ``ROS2FollowDetectionJoint`` are
 self-contained one-shot servo steps (native rclpy or rosbridge). The
 persistent variant, ``RobotFollow``, delegates its
-run lifecycle to :mod:`blacknode.pkg.blacknode_skills.follow_person.follow_runtime`
+run lifecycle to :mod:`blacknode.pkg.blacknode_skills.follow.follow_runtime`
 so Stop All and status reporting can reach it without importing this
 node-decorated module.
 """
@@ -19,7 +19,7 @@ from blacknode.node import Bool, Dict, Enum, Float, Int, Text, node
 
 from blacknode.pkg.blacknode_ros2 import ros2_native_runtime as nr
 from blacknode.pkg.blacknode_ros2 import rosbridge_runtime as rb
-from blacknode.pkg.blacknode_skills.follow_person import follow_runtime
+from blacknode.pkg.blacknode_skills.follow import follow_runtime
 
 _CATEGORY = "Skills"
 

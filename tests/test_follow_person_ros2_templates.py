@@ -1,4 +1,4 @@
-"""Structural checks on the vision-driven follow-person@ros2 mission templates.
+"""Structural checks on the vision-driven follow@ros2 mission templates.
 
 These moved out of blacknode-vision (now blacknode-perception) along with the follow-node types they
 reference (see the embodied-robotics-roadmap Stage D item on extracting
@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-TEMPLATE_DIR = Path(__file__).resolve().parents[1] / "components" / "follow-person" / "adapters" / "ros2" / "templates"
+TEMPLATE_DIR = Path(__file__).resolve().parents[1] / "components" / "follow" / "adapters" / "ros2" / "templates"
 
 
 def test_cube_template_uses_live_cv2_stream_and_qwen3():
@@ -165,4 +165,4 @@ def test_templates_declare_required_adapter():
         "cube-follow-ros2-camera.json",
     ]:
         workflow = json.loads((TEMPLATE_DIR / name).read_text(encoding="utf-8"))
-        assert workflow["metadata"]["required_adapters"] == ["blacknode-skills/follow-person@ros2"]
+        assert workflow["metadata"]["required_adapters"] == ["blacknode-skills/follow@ros2"]

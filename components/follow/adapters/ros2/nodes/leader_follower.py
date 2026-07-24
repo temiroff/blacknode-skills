@@ -1,7 +1,7 @@
 """ROS 2 leader/follower teleoperation node.
 
 Delegates its run lifecycle to
-:mod:`blacknode.pkg.blacknode_skills.follow_person.leader_follower_runtime`
+:mod:`blacknode.pkg.blacknode_skills.follow.leader_follower_runtime`
 so Stop All and status reporting can reach it without importing this
 node-decorated module.
 """
@@ -10,7 +10,7 @@ from __future__ import annotations
 from blacknode.node import Any as AnyPort
 from blacknode.node import Bool, Dict, Enum, Float, Image, Int, List, Text, node
 
-from blacknode.pkg.blacknode_skills.follow_person import leader_follower_runtime
+from blacknode.pkg.blacknode_skills.follow import leader_follower_runtime
 
 _CATEGORY = "Skills"
 
