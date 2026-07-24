@@ -22,8 +22,10 @@ The follow-person ROS 2 adapter ships two one-robot deployment templates:
 Deploy the leader first and the follower second. For two robots attached to one
 computer, leave the follower's `placement` at `same_device` and
 `leader_host=127.0.0.1`. For separate computers, choose `separate_devices` and
-set `leader_host` to the leader computer's LAN IP or hostname. The follower
-uses its local rosbridge on `9090` and the leader endpoint on `9091`.
+set `leader_host` to the leader computer's LAN IP or hostname. On the leader
+template, also enable `Separate computers: expose leader on LAN`. The follower
+uses its local rosbridge on `9090` and the leader endpoint on `9091`. The LAN
+toggle is off by default.
 
 Port `9091` is an unauthenticated rosbridge WebSocket and is intended for a
 trusted robot LAN. Permit TCP `9091` on the leader computer only for the

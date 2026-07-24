@@ -22,7 +22,7 @@
       "params": {
         "transport": "rosbridge",
         "ensure_rosbridge": true,
-        "expose_lan": true,
+        "expose_lan": false,
         "host": "127.0.0.1",
         "port": 9091,
         "state_topic": "/leader/joint_states",
@@ -36,6 +36,20 @@
       "output_types": {"connected": "Bool", "ready": "Bool", "transport": "Text", "topics": "List", "config": "Dict", "report": "Text"},
       "input_defaults": {"transport": "auto", "ensure_rosbridge": true, "expose_lan": false, "host": "127.0.0.1", "port": 9090, "state_topic": "/joint_states", "command_topic": "/joint_commands", "config_topic": "/joint_config", "timeout": 10.0},
       "input_choices": {"transport": ["auto", "native", "rosbridge"]}
+    },
+    "share_on_lan": {
+      "id": "share_on_lan",
+      "type": "Bool",
+      "pos": [80, 20],
+      "params": {
+        "value": false,
+        "label": "Separate computers: expose leader on LAN"
+      },
+      "inputs": [],
+      "outputs": ["value"],
+      "input_types": {},
+      "output_types": {"value": "Bool"},
+      "input_defaults": {}
     },
     "leader_robot": {
       "id": "leader_robot",
@@ -99,6 +113,7 @@
     }
   },
   "edges": [
+    {"from": "share_on_lan", "from_port": "value", "to": "leader_bridge", "to_port": "expose_lan"},
     {"from": "leader_bridge", "from_port": "report", "to": "leader_robot", "to_port": "trigger"},
     {"from": "leader_robot", "from_port": "robot", "to": "release_leader", "to_port": "robot"},
     {"from": "leader_robot", "from_port": "report", "to": "release_leader", "to_port": "trigger"},
