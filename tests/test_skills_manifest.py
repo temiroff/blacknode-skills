@@ -56,5 +56,25 @@ def test_split_leader_follower_templates_are_one_robot_deployments():
         "value": False,
         "label": "Separate computers: expose leader on LAN",
     }
+    assert leader["node_meta"]["leader_robot_index"]["params"] == {
+        "value": 0,
+        "label": "Leader robot index (0 = first USB robot)",
+    }
+    assert {
+        "from": "leader_robot_index",
+        "from_port": "value",
+        "to": "leader_robot",
+        "to_port": "selection",
+    } in leader["edges"]
     assert follower["node_meta"]["follow"]["params"]["leader_port"] == 9091
     assert follower["node_meta"]["follow"]["params"]["armed"] is False
+    assert follower["node_meta"]["follower_robot_index"]["params"] == {
+        "value": 0,
+        "label": "Follower robot index (0 = first USB robot)",
+    }
+    assert {
+        "from": "follower_robot_index",
+        "from_port": "value",
+        "to": "follower_robot",
+        "to_port": "selection",
+    } in follower["edges"]

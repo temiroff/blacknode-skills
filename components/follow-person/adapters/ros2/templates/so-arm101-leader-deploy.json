@@ -51,6 +51,20 @@
       "output_types": {"value": "Bool"},
       "input_defaults": {}
     },
+    "leader_robot_index": {
+      "id": "leader_robot_index",
+      "type": "Int",
+      "pos": [300, 20],
+      "params": {
+        "value": 0,
+        "label": "Leader robot index (0 = first USB robot)"
+      },
+      "inputs": [],
+      "outputs": ["value"],
+      "input_types": {},
+      "output_types": {"value": "Int"},
+      "input_defaults": {}
+    },
     "leader_robot": {
       "id": "leader_robot",
       "type": "Robot",
@@ -114,6 +128,7 @@
   },
   "edges": [
     {"from": "share_on_lan", "from_port": "value", "to": "leader_bridge", "to_port": "expose_lan"},
+    {"from": "leader_robot_index", "from_port": "value", "to": "leader_robot", "to_port": "selection"},
     {"from": "leader_bridge", "from_port": "report", "to": "leader_robot", "to_port": "trigger"},
     {"from": "leader_robot", "from_port": "robot", "to": "release_leader", "to_port": "robot"},
     {"from": "leader_robot", "from_port": "report", "to": "release_leader", "to_port": "trigger"},
