@@ -1,0 +1,107 @@
+{
+  "kind": "blacknode.workflow",
+  "schema_version": 1,
+  "name": "SO-ARM102 Follower Deploy",
+  "saved_at": "2026-07-24T00:00:00",
+  "entrypoint": {"node_id": "out", "port": "value"},
+  "metadata": {
+    "template": true,
+    "description": "Deploy one calibrated follower. Choose same_device for a leader on this computer or separate_devices and enter the leader computer's IP. The follower connects to the leader bridge on 9091 and stays disarmed until Armed is enabled.",
+    "color": "#f59e0b",
+    "required_capabilities": ["joint_group", "position_feedback", "servo_bus"],
+    "required_packages": ["blacknode-skills", "blacknode-robot", "blacknode-drivers", "blacknode-controllers", "blacknode-ros2"],
+    "required_components": ["blacknode-skills/follow-person", "blacknode-robot/core", "blacknode-drivers/feetech", "blacknode-controllers/joint-control", "blacknode-ros2/core", "blacknode-ros2/diagnostics", "blacknode-ros2/rosbridge"],
+    "required_adapters": ["blacknode-skills/follow-person@ros2", "blacknode-drivers/feetech@ros2", "blacknode-controllers/joint-control@ros2"],
+    "deployment_pair": {"id": "so_arm_leader_follower", "role": "follower", "transport": "rosbridge", "leader_port": 9091, "follower_port": 9090}
+  },
+  "node_meta": {
+    "follower_bridge": {
+      "id": "follower_bridge",
+      "type": "ROS2Status",
+      "pos": [80, 180],
+      "params": {"transport": "rosbridge", "ensure_rosbridge": true, "expose_lan": false, "host": "127.0.0.1", "port": 9090, "state_topic": "/follower/joint_states", "command_topic": "/follower/joint_commands", "config_topic": "/follower/joint_config", "timeout": 10.0},
+      "inputs": ["trigger", "transport", "ensure_rosbridge", "expose_lan", "host", "port", "state_topic", "command_topic", "config_topic", "timeout"],
+      "outputs": ["connected", "ready", "transport", "topics", "config", "report"],
+      "input_types": {"trigger": "Any", "transport": "Text", "ensure_rosbridge": "Bool", "expose_lan": "Bool", "host": "Text", "port": "Int", "state_topic": "Text", "command_topic": "Text", "config_topic": "Text", "timeout": "Float"},
+      "output_types": {"connected": "Bool", "ready": "Bool", "transport": "Text", "topics": "List", "config": "Dict", "report": "Text"},
+      "input_defaults": {"transport": "auto", "ensure_rosbridge": true, "expose_lan": false, "host": "127.0.0.1", "port": 9090, "state_topic": "/joint_states", "command_topic": "/joint_commands", "config_topic": "/joint_config", "timeout": 10.0},
+      "input_choices": {"transport": ["auto", "native", "rosbridge"]}
+    },
+    "follower_robot": {
+      "id": "follower_robot",
+      "type": "Robot",
+      "pos": [500, 180],
+      "params": {"profile_id": "so_arm101", "selection": 0, "action": "start", "run_id": "so_arm_follower_driver", "host": "127.0.0.1", "port": 9090, "state_topic": "/follower/joint_states", "command_topic": "/follower/joint_commands", "config_topic": "/follower/joint_config", "control_topic": "/follower/robot_control", "topic_prefix": "follower", "rate_hz": 60.0, "units": "degrees"},
+      "inputs": ["trigger", "profile_id", "profile", "calibration", "selection", "hardware", "usb", "driver", "hardware_selection", "hardware_filter", "port_filter", "match_vendor_id", "match_product_id", "probe_open", "auto_discover", "action", "run_id", "require_hardware", "require_usb", "serial_port", "host", "port", "state_topic", "command_topic", "config_topic", "control_topic", "units", "topic_prefix", "rate_hz"],
+      "outputs": ["found", "ready", "usb_ready", "driver_running", "port", "serial", "profile", "driver", "robot", "hardware", "usb", "devices", "recommended", "permissions", "calibration", "path", "report"],
+      "input_types": {"trigger": "Any", "profile_id": "Text", "profile": "Dict", "calibration": "Dict", "selection": "Int", "hardware": "Dict", "usb": "Dict", "driver": "Dict", "hardware_selection": "Int", "hardware_filter": "Text", "port_filter": "Text", "match_vendor_id": "Text", "match_product_id": "Text", "probe_open": "Bool", "auto_discover": "Bool", "action": "Text", "run_id": "Text", "require_hardware": "Bool", "require_usb": "Bool", "serial_port": "Text", "host": "Text", "port": "Int", "state_topic": "Text", "command_topic": "Text", "config_topic": "Text", "control_topic": "Text", "units": "Text", "topic_prefix": "Text", "rate_hz": "Float"},
+      "output_types": {"found": "Bool", "ready": "Bool", "usb_ready": "Bool", "driver_running": "Bool", "port": "Text", "serial": "Text", "profile": "Dict", "driver": "Dict", "robot": "Dict", "hardware": "Dict", "usb": "Dict", "devices": "List", "recommended": "Dict", "permissions": "Dict", "calibration": "Dict", "path": "Text", "report": "Text"},
+      "input_defaults": {"profile_id": "so_arm101", "profile": {}, "calibration": {}, "selection": 0, "hardware": {}, "usb": {}, "driver": {}, "hardware_selection": 0, "hardware_filter": "", "port_filter": "", "match_vendor_id": "", "match_product_id": "", "probe_open": false, "auto_discover": true, "action": "check", "run_id": "robot_driver", "require_hardware": true, "require_usb": true, "serial_port": "", "host": "127.0.0.1", "port": 9090, "state_topic": "/joint_states", "command_topic": "/joint_commands", "config_topic": "/joint_config", "control_topic": "/robot_control", "units": "degrees", "topic_prefix": "", "rate_hz": 0.0},
+      "input_choices": {"profile_id": ["so_arm101"], "action": ["check", "start", "stop"], "units": ["radians", "degrees"]}
+    },
+    "armed": {
+      "id": "armed",
+      "type": "Bool",
+      "pos": [940, 80],
+      "params": {"value": false, "label": "Armed"},
+      "inputs": [],
+      "outputs": ["value"],
+      "input_types": {},
+      "output_types": {"value": "Bool"},
+      "input_defaults": {}
+    },
+    "follow": {
+      "id": "follow",
+      "type": "ROS2LeaderFollower",
+      "pos": [940, 260],
+      "params": {
+        "action": "start",
+        "run_id": "so_arm_remote_leader_follower",
+        "transport": "rosbridge",
+        "placement": "same_device",
+        "host": "127.0.0.1",
+        "port": 9090,
+        "leader_host": "127.0.0.1",
+        "leader_port": 9091,
+        "follower_host": "127.0.0.1",
+        "follower_port": 9090,
+        "joint_map": {},
+        "scale": {},
+        "offset_deg": {},
+        "tracking_mode": "direct",
+        "loop_hz": 60.0,
+        "max_step_deg": 0.0,
+        "deadband_deg": 0.0,
+        "stale_after": 0.75,
+        "require_calibration": true,
+        "require_leader_released": true,
+        "armed": false,
+        "timeout": 10.0
+      },
+      "inputs": ["trigger", "action", "run_id", "leader_robot", "follower_robot", "transport", "placement", "host", "port", "leader_host", "leader_port", "follower_host", "follower_port", "joint_map", "scale", "offset_deg", "tracking_mode", "loop_hz", "max_step_deg", "deadband_deg", "stale_after", "require_calibration", "require_leader_released", "armed", "timeout"],
+      "outputs": ["running", "live", "armed", "commanded", "leader_pose", "follower_pose", "target", "sample_stream", "clamped", "joint_count", "dashboard", "summary", "report"],
+      "input_types": {"trigger": "Any", "action": "Text", "run_id": "Text", "leader_robot": "Dict", "follower_robot": "Dict", "transport": "Text", "placement": "Text", "host": "Text", "port": "Int", "leader_host": "Text", "leader_port": "Int", "follower_host": "Text", "follower_port": "Int", "joint_map": "Dict", "scale": "Dict", "offset_deg": "Dict", "tracking_mode": "Text", "loop_hz": "Float", "max_step_deg": "Float", "deadband_deg": "Float", "stale_after": "Float", "require_calibration": "Bool", "require_leader_released": "Bool", "armed": "Bool", "timeout": "Float"},
+      "output_types": {"running": "Bool", "live": "Bool", "armed": "Bool", "commanded": "Bool", "leader_pose": "Dict", "follower_pose": "Dict", "target": "Dict", "sample_stream": "Dict", "clamped": "List", "joint_count": "Int", "dashboard": "Image", "summary": "Dict", "report": "Text"},
+      "input_defaults": {"action": "start", "run_id": "leader_follower", "transport": "auto", "placement": "same_device", "host": "127.0.0.1", "port": 9090, "leader_host": "", "leader_port": 0, "follower_host": "", "follower_port": 0, "joint_map": {}, "scale": {}, "offset_deg": {}, "tracking_mode": "direct", "loop_hz": 60.0, "max_step_deg": 0.0, "deadband_deg": 0.0, "stale_after": 0.75, "require_calibration": true, "require_leader_released": true, "armed": false, "timeout": 10.0},
+      "input_choices": {"action": ["start", "stop", "check"], "transport": ["auto", "native", "rosbridge"], "placement": ["same_device", "separate_devices"], "tracking_mode": ["bounded", "direct"]}
+    },
+    "out": {
+      "id": "out",
+      "type": "Output",
+      "pos": [1420, 260],
+      "params": {"label": "Follower deployment status"},
+      "inputs": ["value"],
+      "outputs": [],
+      "input_types": {"value": "Any"},
+      "output_types": {},
+      "input_defaults": {}
+    }
+  },
+  "edges": [
+    {"from": "follower_bridge", "from_port": "report", "to": "follower_robot", "to_port": "trigger"},
+    {"from": "follower_robot", "from_port": "robot", "to": "follow", "to_port": "follower_robot"},
+    {"from": "follower_robot", "from_port": "report", "to": "follow", "to_port": "trigger"},
+    {"from": "armed", "from_port": "value", "to": "follow", "to_port": "armed"},
+    {"from": "follow", "from_port": "summary", "to": "out", "to_port": "value"}
+  ]
+}
