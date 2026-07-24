@@ -27,6 +27,20 @@
       "input_defaults": {"transport": "auto", "ensure_rosbridge": true, "expose_lan": false, "host": "127.0.0.1", "port": 9090, "state_topic": "/joint_states", "command_topic": "/joint_commands", "config_topic": "/joint_config", "timeout": 10.0},
       "input_choices": {"transport": ["auto", "native", "rosbridge"]}
     },
+    "follower_robot_index": {
+      "id": "follower_robot_index",
+      "type": "Int",
+      "pos": [280, 80],
+      "params": {
+        "value": 0,
+        "label": "Follower robot index (0 = first USB robot)"
+      },
+      "inputs": [],
+      "outputs": ["value"],
+      "input_types": {},
+      "output_types": {"value": "Int"},
+      "input_defaults": {}
+    },
     "follower_robot": {
       "id": "follower_robot",
       "type": "Robot",
@@ -99,6 +113,7 @@
   },
   "edges": [
     {"from": "follower_bridge", "from_port": "report", "to": "follower_robot", "to_port": "trigger"},
+    {"from": "follower_robot_index", "from_port": "value", "to": "follower_robot", "to_port": "selection"},
     {"from": "follower_robot", "from_port": "robot", "to": "follow", "to_port": "follower_robot"},
     {"from": "follower_robot", "from_port": "report", "to": "follow", "to_port": "trigger"},
     {"from": "armed", "from_port": "value", "to": "follow", "to_port": "armed"},
