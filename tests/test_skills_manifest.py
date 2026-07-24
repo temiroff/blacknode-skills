@@ -51,6 +51,10 @@ def test_split_leader_follower_templates_are_one_robot_deployments():
         node["type"] == "Robot" for node in follower["node_meta"].values()
     ) == 1
     assert leader["node_meta"]["leader_bridge"]["params"]["port"] == 9091
-    assert leader["node_meta"]["leader_bridge"]["params"]["expose_lan"] is True
+    assert leader["node_meta"]["leader_bridge"]["params"]["expose_lan"] is False
+    assert leader["node_meta"]["share_on_lan"]["params"] == {
+        "value": False,
+        "label": "Separate computers: expose leader on LAN",
+    }
     assert follower["node_meta"]["follow"]["params"]["leader_port"] == 9091
     assert follower["node_meta"]["follow"]["params"]["armed"] is False
