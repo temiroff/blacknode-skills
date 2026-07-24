@@ -6,13 +6,13 @@
   "entrypoint": {"node_id": "out", "port": "value"},
   "metadata": {
     "template": true,
-    "description": "Deploy one calibrated SO-ARM leader to its paired hardware device. Deployment binds the Robot to that device's exact USB serial path, starts a dedicated rosbridge endpoint, releases torque for hand guidance, and exposes leader pose on TCP 9091 for the paired follower deployment.",
+    "description": "Deploy one calibrated SO-ARM leader to its paired hardware device. Linux deployments use native ROS 2 and release torque for hand guidance. Windows local runs automatically use the compatible rosbridge transport.",
     "color": "#14b8a6",
     "required_capabilities": ["joint_group", "position_feedback", "servo_bus"],
     "required_packages": ["blacknode-skills", "blacknode-robot", "blacknode-drivers", "blacknode-controllers", "blacknode-ros2"],
-    "required_components": ["blacknode-skills/follow-person", "blacknode-robot/core", "blacknode-drivers/feetech", "blacknode-controllers/joint-control", "blacknode-ros2/core", "blacknode-ros2/diagnostics", "blacknode-ros2/rosbridge"],
+    "required_components": ["blacknode-skills/follow-person", "blacknode-robot/core", "blacknode-drivers/feetech", "blacknode-controllers/joint-control", "blacknode-ros2/core", "blacknode-ros2/diagnostics"],
     "required_adapters": ["blacknode-skills/follow-person@ros2", "blacknode-drivers/feetech@ros2", "blacknode-controllers/joint-control@ros2"],
-    "deployment_pair": {"id": "so_arm_leader_follower", "role": "leader", "transport": "rosbridge", "port": 9091}
+    "deployment_pair": {"id": "so_arm_leader_follower", "role": "leader", "transport": "auto", "port": 9091}
   },
   "node_meta": {
     "leader_bridge": {
@@ -20,7 +20,7 @@
       "type": "ROS2Status",
       "pos": [80, 120],
       "params": {
-        "transport": "rosbridge",
+        "transport": "auto",
         "ensure_rosbridge": true,
         "expose_lan": false,
         "host": "127.0.0.1",
@@ -84,7 +84,7 @@
       "params": {
         "run_id": "so_arm_leader_pose",
         "action": "release",
-        "transport": "rosbridge",
+        "transport": "auto",
         "host": "127.0.0.1",
         "port": 9091,
         "state_topic": "/leader/joint_states",

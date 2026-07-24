@@ -6,20 +6,20 @@
   "entrypoint": {"node_id": "out", "port": "value"},
   "metadata": {
     "template": true,
-    "description": "Deploy one calibrated follower to its paired hardware device. Deployment binds the Robot to that device's exact USB serial path. Choose same_device for a leader on this computer or separate_devices and enter the leader computer's IP. The follower connects to the leader bridge on 9091 and stays disarmed until Armed is enabled.",
+    "description": "Deploy one calibrated follower to its paired hardware device. Linux deployments use the native ROS 2 graph for leader pose and follower commands. Windows local runs automatically use rosbridge. The follower stays disarmed until Armed is enabled.",
     "color": "#f59e0b",
     "required_capabilities": ["joint_group", "position_feedback", "servo_bus"],
     "required_packages": ["blacknode-skills", "blacknode-robot", "blacknode-drivers", "blacknode-controllers", "blacknode-ros2"],
-    "required_components": ["blacknode-skills/follow-person", "blacknode-robot/core", "blacknode-drivers/feetech", "blacknode-controllers/joint-control", "blacknode-ros2/core", "blacknode-ros2/diagnostics", "blacknode-ros2/rosbridge"],
+    "required_components": ["blacknode-skills/follow-person", "blacknode-robot/core", "blacknode-drivers/feetech", "blacknode-controllers/joint-control", "blacknode-ros2/core", "blacknode-ros2/diagnostics"],
     "required_adapters": ["blacknode-skills/follow-person@ros2", "blacknode-drivers/feetech@ros2", "blacknode-controllers/joint-control@ros2"],
-    "deployment_pair": {"id": "so_arm_leader_follower", "role": "follower", "transport": "rosbridge", "leader_port": 9091, "follower_port": 9090}
+    "deployment_pair": {"id": "so_arm_leader_follower", "role": "follower", "transport": "auto", "leader_port": 9091, "follower_port": 9090}
   },
   "node_meta": {
     "follower_bridge": {
       "id": "follower_bridge",
       "type": "ROS2Status",
       "pos": [80, 180],
-      "params": {"transport": "rosbridge", "ensure_rosbridge": true, "expose_lan": false, "host": "127.0.0.1", "port": 9090, "state_topic": "/follower/joint_states", "command_topic": "/follower/joint_commands", "config_topic": "/follower/joint_config", "timeout": 10.0},
+      "params": {"transport": "auto", "ensure_rosbridge": true, "expose_lan": false, "host": "127.0.0.1", "port": 9090, "state_topic": "/follower/joint_states", "command_topic": "/follower/joint_commands", "config_topic": "/follower/joint_config", "timeout": 10.0},
       "inputs": ["trigger", "transport", "ensure_rosbridge", "expose_lan", "host", "port", "state_topic", "command_topic", "config_topic", "timeout"],
       "outputs": ["connected", "ready", "transport", "topics", "config", "report"],
       "input_types": {"trigger": "Any", "transport": "Text", "ensure_rosbridge": "Bool", "expose_lan": "Bool", "host": "Text", "port": "Int", "state_topic": "Text", "command_topic": "Text", "config_topic": "Text", "timeout": "Float"},
@@ -57,7 +57,7 @@
       "params": {
         "action": "start",
         "run_id": "so_arm_remote_leader_follower",
-        "transport": "rosbridge",
+        "transport": "auto",
         "placement": "same_device",
         "host": "127.0.0.1",
         "port": 9090,

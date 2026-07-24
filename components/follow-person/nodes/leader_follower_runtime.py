@@ -38,6 +38,21 @@ def _resolve_transport(ctx: dict) -> str:
     return "native" if native_ok else "rosbridge"
 
 
+def _release_role_session(
+    item: dict[str, Any],
+    role: str,
+    *,
+    discard: bool = False,
+) -> None:
+    session = item.get(f"{role}_session")
+    transport = str(item.get(f"{role}_transport") or "")
+    runtime = nr if transport == "native" else rb
+    runtime.release_joint_stream(session, discard=discard)
+    item[f"{role}_session"] = None
+    item[f"{role}_signature"] = None
+    item[f"{role}_transport"] = None
+
+
 def _driver_is_calibrated(driver: dict[str, Any]) -> bool:
     profile = driver.get("profile") if isinstance(driver.get("profile"), dict) else {}
     calibration = (
@@ -215,8 +230,7 @@ def _leader_follower_step(item: dict[str, Any], ctx: dict[str, Any]) -> dict[str
         or not _driver_is_calibrated(follower_driver)
     ):
         return _leader_follower_result(running=True, armed=armed, report="BLOCKED: save hardware calibration for both leader and follower.")
-    if _resolve_transport(ctx) != "rosbridge":
-        return _leader_follower_result(running=True, armed=armed, report="BLOCKED: leader-follower currently requires rosbridge transport.")
+    transport = _resolve_transport(ctx)
 
     host = str(ctx.get("host") or leader.get("host") or follower.get("host") or "127.0.0.1")
     port = int(ctx.get("port") or leader.get("port") or follower.get("port") or 9090)
@@ -224,7 +238,8 @@ def _leader_follower_step(item: dict[str, Any], ctx: dict[str, Any]) -> dict[str
     follower_host, follower_port = _endpoint(ctx, "follower", host, port)
     placement = str(ctx.get("placement") or "same_device").strip().lower()
     if (
-        placement == "separate_devices"
+        transport == "rosbridge"
+        and placement == "separate_devices"
         and leader_host.strip().lower() in {"127.0.0.1", "localhost", "::1"}
     ):
         return _leader_follower_result(
@@ -235,25 +250,39 @@ def _leader_follower_step(item: dict[str, Any], ctx: dict[str, Any]) -> dict[str
                 "computer's LAN IP or hostname."
             ),
         )
-    leader_signature = (
-        leader_host,
-        leader_port,
+    leader_topics = (
         str(leader.get("state_topic") or "/leader/joint_states"),
         str(leader.get("command_topic") or "/leader/joint_commands"),
         str(leader.get("config_topic") or "/leader/joint_config"),
     )
-    follower_signature = (
-        follower_host,
-        follower_port,
+    follower_topics = (
         str(follower.get("state_topic") or "/follower/joint_states"),
         str(follower.get("command_topic") or "/follower/joint_commands"),
         str(follower.get("config_topic") or "/follower/joint_config"),
     )
+    leader_signature = (
+        (leader_host, leader_port, *leader_topics)
+        if transport == "rosbridge"
+        else leader_topics
+    )
+    follower_signature = (
+        (follower_host, follower_port, *follower_topics)
+        if transport == "rosbridge"
+        else follower_topics
+    )
+    session_runtime = nr if transport == "native" else rb
     for role, signature in (("leader", leader_signature), ("follower", follower_signature)):
-        if item.get(f"{role}_signature") != signature:
-            rb.release_joint_stream(item.get(f"{role}_session"), discard=True)
-            item[f"{role}_session"] = rb.acquire_joint_stream(*signature, timeout=min(2.0, float(ctx.get("timeout") or 10.0)))
+        if (
+            item.get(f"{role}_signature") != signature
+            or item.get(f"{role}_transport") != transport
+        ):
+            _release_role_session(item, role, discard=True)
+            item[f"{role}_session"] = session_runtime.acquire_joint_stream(
+                *signature,
+                timeout=min(2.0, float(ctx.get("timeout") or 10.0)),
+            )
             item[f"{role}_signature"] = signature
+            item[f"{role}_transport"] = transport
     leader_session = item["leader_session"]
     follower_session = item["follower_session"]
     leader_pose_rad, leader_config, leader_age = leader_session.snapshot()
@@ -274,9 +303,7 @@ def _leader_follower_step(item: dict[str, Any], ctx: dict[str, Any]) -> dict[str
             continue
         issue = "missing" if not pose else f"stale ({age:.2f}s > {stale_after:.2f}s)"
         stream_issues.append(f"{role} {issue}")
-        rb.release_joint_stream(session, discard=True)
-        item[f"{role}_session"] = None
-        item[f"{role}_signature"] = None
+        _release_role_session(item, role, discard=True)
         item[f"{role}_session_resets"] = int(item.get(f"{role}_session_resets") or 0) + 1
     if stream_issues:
         return _leader_follower_result(
@@ -301,7 +328,7 @@ def _leader_follower_step(item: dict[str, Any], ctx: dict[str, Any]) -> dict[str
     }
     scales = ctx.get("scale") if isinstance(ctx.get("scale"), dict) else {}
     offsets = ctx.get("offset_deg") if isinstance(ctx.get("offset_deg"), dict) else {}
-    limits = rb.limits_radians(follower_config)
+    limits = session_runtime.limits_radians(follower_config)
     target_rad = dict(follower_pose_rad)
     target: dict[str, float] = {}
     leader_display: dict[str, float] = {}
@@ -368,7 +395,14 @@ def _leader_follower_step(item: dict[str, Any], ctx: dict[str, Any]) -> dict[str
         "live": True,
         "commanded": commanded,
         "clamped": list(clamped),
-        "leader_hardware_id": leader_id or f"remote:{leader_host}:{leader_port}",
+        "leader_hardware_id": (
+            leader_id
+            or (
+                f"remote:{leader_host}:{leader_port}"
+                if transport == "rosbridge"
+                else f"remote:native:{leader_topics[0]}"
+            )
+        ),
         "follower_hardware_id": follower_id,
         "leader_calibration_path": str(leader_driver.get("calibration_path") or ""),
         "follower_calibration_path": str(follower_driver.get("calibration_path") or ""),
@@ -404,8 +438,8 @@ def _leader_follower_worker(run_id: str, item: dict[str, Any]) -> None:
             hz = max(1.0, min(60.0, float(ctx.get("loop_hz") or 60.0)))
             item["stop"].wait(1.0 / hz)
     finally:
-        rb.release_joint_stream(item.get("leader_session"))
-        rb.release_joint_stream(item.get("follower_session"))
+        _release_role_session(item, "leader")
+        _release_role_session(item, "follower")
 
 
 def run_leader_follower(ctx: dict) -> dict:
@@ -438,6 +472,7 @@ def run_leader_follower(ctx: dict) -> dict:
     item: dict[str, Any] = {
         "ctx": dict(ctx), "stop": threading.Event(), "leader_session": None,
         "follower_session": None, "leader_signature": None, "follower_signature": None,
+        "leader_transport": None, "follower_transport": None,
         "last": _leader_follower_result(running=True, armed=bool(ctx.get("armed")), report="Waiting for both robots…"),
         "updated_at": time.time(),
         "sample": {}, "sample_sequence": 0,

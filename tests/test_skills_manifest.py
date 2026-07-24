@@ -51,6 +51,8 @@ def test_split_leader_follower_templates_are_one_robot_deployments():
         node["type"] == "Robot" for node in follower["node_meta"].values()
     ) == 1
     assert leader["node_meta"]["leader_bridge"]["params"]["port"] == 9091
+    assert leader["node_meta"]["leader_bridge"]["params"]["transport"] == "auto"
+    assert leader["node_meta"]["release_leader"]["params"]["transport"] == "auto"
     assert leader["node_meta"]["leader_bridge"]["params"]["expose_lan"] is False
     assert leader["node_meta"]["share_on_lan"]["params"] == {
         "value": False,
@@ -60,6 +62,8 @@ def test_split_leader_follower_templates_are_one_robot_deployments():
     assert leader["node_meta"]["leader_robot"]["params"]["selection"] == 0
     assert not any(edge["to_port"] == "selection" for edge in leader["edges"])
     assert follower["node_meta"]["follow"]["params"]["leader_port"] == 9091
+    assert follower["node_meta"]["follower_bridge"]["params"]["transport"] == "auto"
+    assert follower["node_meta"]["follow"]["params"]["transport"] == "auto"
     assert follower["node_meta"]["follow"]["params"]["armed"] is False
     assert "follower_robot_index" not in follower["node_meta"]
     assert follower["node_meta"]["follower_robot"]["params"]["selection"] == 0
