@@ -54,6 +54,8 @@ def test_split_leader_follower_templates_are_one_robot_deployments():
     assert leader["node_meta"]["leader_bridge"]["params"]["port"] == 9091
     assert leader["node_meta"]["leader_bridge"]["params"]["transport"] == "auto"
     assert leader["node_meta"]["release_leader"]["params"]["transport"] == "auto"
+    assert leader["node_meta"]["release_leader"]["params"]["live_monitor"] is False
+    assert leader["node_meta"]["leader_robot"]["params"]["read_only"] is True
     assert leader["node_meta"]["leader_bridge"]["params"]["expose_lan"] is False
     assert leader["node_meta"]["share_on_lan"]["params"] == {
         "value": False,

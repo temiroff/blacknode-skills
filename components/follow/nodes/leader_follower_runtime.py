@@ -121,6 +121,7 @@ def _ensure_control_session(
             item["control_session"] = nr.acquire_string_subscription(
                 topic,
                 callback,
+                node_name=f"blacknode_{run_id}_control",
             )
         else:
             item["control_session"] = rb.acquire_string_subscription(
@@ -445,10 +446,25 @@ def _leader_follower_step(item: dict[str, Any], ctx: dict[str, Any]) -> dict[str
             or item.get(f"{role}_transport") != transport
         ):
             _release_role_session(item, role, discard=True)
-            item[f"{role}_session"] = session_runtime.acquire_joint_stream(
-                *signature,
-                timeout=min(2.0, float(ctx.get("timeout") or 10.0)),
-            )
+            if transport == "native":
+                state_topic, command_topic, config_topic = signature
+                item[f"{role}_session"] = nr.acquire_joint_stream(
+                    state_topic,
+                    "" if role == "leader" else command_topic,
+                    config_topic,
+                    timeout=min(2.0, float(ctx.get("timeout") or 10.0)),
+                    node_name=f"blacknode_{str(ctx.get('run_id') or 'leader_follower')}_{role}",
+                )
+            else:
+                session_host, session_port, state_topic, command_topic, config_topic = signature
+                item[f"{role}_session"] = rb.acquire_joint_stream(
+                    session_host,
+                    session_port,
+                    state_topic,
+                    "" if role == "leader" else command_topic,
+                    config_topic,
+                    timeout=min(2.0, float(ctx.get("timeout") or 10.0)),
+                )
             item[f"{role}_signature"] = signature
             item[f"{role}_transport"] = transport
     leader_session = item["leader_session"]
