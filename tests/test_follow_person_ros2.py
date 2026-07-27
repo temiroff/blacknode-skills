@@ -829,6 +829,36 @@ def test_leader_follower_live_service_updates_and_stops(monkeypatch):
         leader_follower_runtime.stop_leader_follower_services()
 
 
+def test_leader_follower_remote_control_is_explicit_and_scoped():
+    run_id = "SO Arm Follower"
+    item = {"ctx": {"armed": False}}
+    with leader_follower_runtime._leader_follower_lock:
+        leader_follower_runtime._leader_follower_runs[run_id] = item
+    try:
+        assert leader_follower_runtime.leader_follower_control_topic(
+            run_id,
+        ) == "/blacknode/leader_follower/SO_Arm_Follower/control"
+        assert leader_follower_runtime.leader_follower_control_topic(
+            run_id,
+            "/blacknode/leader_follower/follower/control;unsafe",
+        ) == "/blacknode/leader_follower/SO_Arm_Follower/control"
+        assert leader_follower_runtime._apply_control_message(
+            run_id,
+            item,
+            '{"armed": true}',
+        )
+        assert item["ctx"]["armed"] is True
+        assert not leader_follower_runtime._apply_control_message(
+            run_id,
+            item,
+            '{"action": "publish arbitrary command"}',
+        )
+        assert item["ctx"]["armed"] is True
+    finally:
+        with leader_follower_runtime._leader_follower_lock:
+            leader_follower_runtime._leader_follower_runs.pop(run_id, None)
+
+
 def test_joint_control_stop_delegates_to_follow_person_runtimes(monkeypatch):
     """The joint-control adapter's stop_runtime_services() reaches this adapter's run counts."""
     from blacknode.packages import _import_nodes_module

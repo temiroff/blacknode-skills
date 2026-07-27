@@ -11,6 +11,7 @@ import base64
 import html
 import json
 import math
+import re
 import threading
 import time
 from typing import Any
@@ -22,6 +23,11 @@ from blacknode.pkg.blacknode_ros2 import sample_stream
 _leader_follower_lock = threading.Lock()
 _leader_follower_runs: dict[str, dict[str, Any]] = {}
 _TORQUE_CONTROL_RETRY_SECONDS = 0.5
+_CONTROL_RETRY_SECONDS = 5.0
+_CONTROL_SEGMENT_RE = re.compile(r"[^a-zA-Z0-9_]+")
+_CONTROL_TOPIC_RE = re.compile(
+    r"/blacknode/leader_follower/[A-Za-z0-9_]+(?:/[A-Za-z0-9_]+)*"
+)
 
 
 def _finite_float(value: Any) -> float | None:
@@ -38,6 +44,101 @@ def _resolve_transport(ctx: dict) -> str:
         return requested
     native_ok, _ = nr.available()
     return "native" if native_ok else "rosbridge"
+
+
+def leader_follower_control_topic(run_id: str, requested: str = "") -> str:
+    explicit = str(requested or "").strip()
+    if _CONTROL_TOPIC_RE.fullmatch(explicit):
+        return explicit
+    segment = _CONTROL_SEGMENT_RE.sub("_", str(run_id or "leader_follower")).strip("_")
+    return f"/blacknode/leader_follower/{segment or 'leader_follower'}/control"
+
+
+def _release_control_session(item: dict[str, Any]) -> None:
+    session = item.get("control_session")
+    transport = str(item.get("control_transport") or "")
+    runtime = nr if transport == "native" else rb
+    try:
+        runtime.release_string_subscription(session)
+    except Exception:
+        pass
+    item["control_session"] = None
+    item["control_signature"] = None
+    item["control_transport"] = None
+
+
+def _apply_control_message(
+    run_id: str,
+    item: dict[str, Any],
+    message: str,
+) -> bool:
+    try:
+        payload = json.loads(message)
+    except (TypeError, ValueError):
+        return False
+    armed = payload.get("armed") if isinstance(payload, dict) else None
+    if not isinstance(armed, bool):
+        return False
+    with _leader_follower_lock:
+        if _leader_follower_runs.get(run_id) is not item:
+            return False
+        item["ctx"]["armed"] = armed
+        item["last_control"] = {
+            "armed": armed,
+            "received_at": time.time(),
+        }
+    return True
+
+
+def _ensure_control_session(
+    run_id: str,
+    item: dict[str, Any],
+    ctx: dict[str, Any],
+) -> None:
+    transport = _resolve_transport(ctx)
+    topic = leader_follower_control_topic(run_id, str(ctx.get("control_topic") or ""))
+    host = str(ctx.get("host") or "127.0.0.1")
+    port = int(ctx.get("port") or 9090)
+    follower_host, follower_port = _endpoint(ctx, "follower", host, port)
+    signature = (
+        (follower_host, follower_port, topic)
+        if transport == "rosbridge"
+        else (topic,)
+    )
+    if (
+        item.get("control_session") is not None
+        and item.get("control_signature") == signature
+        and item.get("control_transport") == transport
+    ):
+        return
+    now = time.monotonic()
+    if now < float(item.get("control_retry_at") or 0.0):
+        return
+    _release_control_session(item)
+    callback = lambda message: _apply_control_message(run_id, item, message)
+    try:
+        if transport == "native":
+            item["control_session"] = nr.acquire_string_subscription(
+                topic,
+                callback,
+            )
+        else:
+            item["control_session"] = rb.acquire_string_subscription(
+                follower_host,
+                follower_port,
+                topic,
+                callback,
+                timeout=min(2.0, float(ctx.get("timeout") or 10.0)),
+            )
+    except Exception as exc:
+        item["control_error"] = str(exc)
+        item["control_retry_at"] = now + _CONTROL_RETRY_SECONDS
+        return
+    item["control_signature"] = signature
+    item["control_transport"] = transport
+    item["control_topic"] = topic
+    item["control_error"] = ""
+    item["control_retry_at"] = 0.0
 
 
 def _release_role_session(
@@ -203,6 +304,7 @@ def _stop_leader_follower(run_id: str) -> bool:
         _leader_follower_runs.pop(run_id, None)
     sample_stream.unregister(run_id)
     item["stop"].set()
+    _release_control_session(item)
     thread = item.get("thread")
     if thread is not None and thread is not threading.current_thread():
         thread.join(timeout=2.0)
@@ -233,6 +335,8 @@ def leader_follower_runtime_status() -> list[dict[str, Any]]:
                 "armed": bool(item.get("ctx", {}).get("armed", False)),
                 "loop_hz": float(item.get("ctx", {}).get("loop_hz") or 60.0),
                 "sample_stream": dict(item.get("sample_stream") or {}),
+                "control_topic": str(item.get("control_topic") or ""),
+                "control_error": str(item.get("control_error") or ""),
                 "report": str(item.get("last", {}).get("report") or ""),
             }
             for run_id, item in _leader_follower_runs.items()
@@ -533,6 +637,7 @@ def _leader_follower_worker(run_id: str, item: dict[str, Any]) -> None:
                 if _leader_follower_runs.get(run_id) is item:
                     item["last"] = result
                     item["updated_at"] = time.time()
+            _ensure_control_session(run_id, item, ctx)
             hz = max(1.0, min(60.0, float(ctx.get("loop_hz") or 60.0)))
             item["stop"].wait(1.0 / hz)
     finally:
@@ -542,6 +647,7 @@ def _leader_follower_worker(run_id: str, item: dict[str, Any]) -> None:
             pass
         _release_role_session(item, "leader")
         _release_role_session(item, "follower")
+        _release_control_session(item)
 
 
 def run_leader_follower(ctx: dict) -> dict:
@@ -575,6 +681,9 @@ def run_leader_follower(ctx: dict) -> dict:
         "ctx": dict(ctx), "stop": threading.Event(), "leader_session": None,
         "follower_session": None, "leader_signature": None, "follower_signature": None,
         "leader_transport": None, "follower_transport": None,
+        "control_session": None, "control_signature": None,
+        "control_transport": None, "control_topic": "", "control_error": "",
+        "control_retry_at": 0.0,
         "last": _leader_follower_result(running=True, armed=bool(ctx.get("armed")), report="Waiting for both robots…"),
         "updated_at": time.time(),
         "sample": {}, "sample_sequence": 0,

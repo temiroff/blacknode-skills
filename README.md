@@ -22,6 +22,12 @@ two one-robot deployment templates:
   `Armed`, stopping the controller, or shutting down the deployment explicitly
   releases follower torque. The controller never enables leader torque.
 
+Running follower deployments also listen on their declared
+`/blacknode/leader_follower/<run_id>/control` topic. The authenticated Runtime
+uses that fixed topic for the editor's explicit **Arm follower** and
+**Disarm follower** actions. A deployment always starts from the graph's
+disarmed default; restart never restores a previous live arm command.
+
 Deploy the leader first and the follower second. Linux deployments select
 native `rclpy`; two robots on one computer share its ROS 2 graph directly.
 For separate Linux computers, use the same ROS domain and a network where DDS
