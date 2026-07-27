@@ -1,6 +1,6 @@
 [package]
 name = "blacknode-skills"
-version = "0.2.1"
+version = "0.2.2"
 description = "Reusable task-level robot skills composed from stable Blacknode capabilities."
 requires-blacknode = ">=0.3.0"
 layer = "skills"
@@ -23,7 +23,7 @@ nodes = ["components/follow/nodes"]
 
 [components.follow.dependencies]
 requires = [
-  { package = "blacknode-ros2", component = "core", version = ">=0.5.3,<1.0.0" },
+  { package = "blacknode-ros2", component = "core", version = ">=0.5.5,<1.0.0" },
 ]
 
 [components.follow.adapters.ros2]
@@ -40,7 +40,7 @@ node-types = [
 [components.follow.adapters.ros2.dependencies]
 requires = [
   { package = "blacknode-robot", component = "core", version = ">=0.2.0,<1.0.0" },
-  { package = "blacknode-ros2", component = "core", version = ">=0.5.3,<1.0.0" },
+  { package = "blacknode-ros2", component = "core", version = ">=0.5.5,<1.0.0" },
 ]
 
 [components.delivery]

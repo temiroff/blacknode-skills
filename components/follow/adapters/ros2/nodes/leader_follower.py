@@ -24,6 +24,7 @@ _CATEGORY = "Skills"
         "trigger": AnyPort,
         "action": Enum(["start", "stop", "check"], default="start"),
         "run_id": Text(default="leader_follower"),
+        "control_topic": Text(default=""),
         "leader_robot": Dict,
         "follower_robot": Dict,
         "transport": Enum(["auto", "native", "rosbridge"], default="auto"),
