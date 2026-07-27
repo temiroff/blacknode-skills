@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import base64
 import html
+import json
 import math
 import threading
 import time
@@ -20,6 +21,7 @@ from blacknode.pkg.blacknode_ros2 import sample_stream
 
 _leader_follower_lock = threading.Lock()
 _leader_follower_runs: dict[str, dict[str, Any]] = {}
+_TORQUE_CONTROL_RETRY_SECONDS = 0.5
 
 
 def _finite_float(value: Any) -> float | None:
@@ -51,6 +53,50 @@ def _release_role_session(
     item[f"{role}_session"] = None
     item[f"{role}_signature"] = None
     item[f"{role}_transport"] = None
+
+
+def _request_follower_torque(
+    item: dict[str, Any],
+    enabled: bool,
+    *,
+    force: bool = False,
+) -> dict[str, Any]:
+    """Explicitly hold or release only the follower for an armed-state change."""
+    control = item.get("follower_control")
+    if not isinstance(control, dict):
+        return {"ok": False, "error": "follower control endpoint is not ready"}
+    now = time.monotonic()
+    previous = item.get("follower_torque_request")
+    if (
+        not force
+        and isinstance(previous, dict)
+        and previous.get("enabled") is enabled
+        and now - float(previous.get("sent_at") or 0.0) < _TORQUE_CONTROL_RETRY_SECONDS
+    ):
+        return {"ok": True, "pending": True}
+    action = "exit_teach" if enabled else "enter_teach"
+    payload = json.dumps({"action": action})
+    transport = str(control.get("transport") or "")
+    if transport == "native":
+        result = nr.publish_string(
+            str(control.get("topic") or "/follower/robot_control"),
+            payload,
+            2.0,
+        )
+    else:
+        result = rb.publish_string(
+            str(control.get("host") or "127.0.0.1"),
+            int(control.get("port") or 9090),
+            str(control.get("topic") or "/follower/robot_control"),
+            payload,
+            2.0,
+        )
+    item["follower_torque_request"] = {
+        "enabled": enabled,
+        "sent_at": now,
+        "ok": bool(result.get("ok")),
+    }
+    return result
 
 
 def _driver_is_calibrated(driver: dict[str, Any]) -> bool:
@@ -144,9 +190,17 @@ def _leader_follower_result(
 
 def _stop_leader_follower(run_id: str) -> bool:
     with _leader_follower_lock:
-        item = _leader_follower_runs.pop(run_id, None)
+        item = _leader_follower_runs.get(run_id)
     if item is None:
         return False
+    try:
+        _request_follower_torque(item, False, force=True)
+    except Exception:
+        # Driver shutdown also releases torque; this is a best-effort early
+        # release while its control transport is still available.
+        pass
+    with _leader_follower_lock:
+        _leader_follower_runs.pop(run_id, None)
     sample_stream.unregister(run_id)
     item["stop"].set()
     thread = item.get("thread")
@@ -260,6 +314,16 @@ def _leader_follower_step(item: dict[str, Any], ctx: dict[str, Any]) -> dict[str
         str(follower.get("command_topic") or "/follower/joint_commands"),
         str(follower.get("config_topic") or "/follower/joint_config"),
     )
+    item["follower_control"] = {
+        "transport": transport,
+        "host": follower_host,
+        "port": follower_port,
+        "topic": str(
+            follower.get("control_topic")
+            or ctx.get("follower_control_topic")
+            or "/follower/robot_control"
+        ),
+    }
     leader_signature = (
         (leader_host, leader_port, *leader_topics)
         if transport == "rosbridge"
@@ -318,6 +382,40 @@ def _leader_follower_step(item: dict[str, Any], ctx: dict[str, Any]) -> dict[str
         leader_config = leader_session.wait_for_config(0.5)
     if not follower_config:
         follower_config = follower_session.wait_for_config(0.5)
+
+    follower_torque = follower_config.get("torque_enabled")
+    if follower_torque is not None and bool(follower_torque) != armed:
+        last_error = str(follower_config.get("last_error") or "").strip()
+        if last_error:
+            return _leader_follower_result(
+                running=True,
+                armed=armed,
+                live=True,
+                report=f"BLOCKED: follower torque control failed: {last_error}",
+            )
+        requested = _request_follower_torque(item, armed)
+        if not requested.get("ok"):
+            return _leader_follower_result(
+                running=True,
+                armed=armed,
+                live=True,
+                report=(
+                    "BLOCKED: follower torque command was not delivered: "
+                    f"{requested.get('error') or 'unknown transport error'}"
+                ),
+            )
+        return _leader_follower_result(
+            running=True,
+            armed=armed,
+            live=True,
+            report=(
+                "ARMING: follower hold requested at its current pose; waiting "
+                "for torque confirmation."
+                if armed
+                else "DISARMING: follower torque release requested; waiting for confirmation."
+            ),
+        )
+    item["follower_torque_request"] = None
 
     units = "degrees"
     leader_pose = {name: math.degrees(value) for name, value in leader_pose_rad.items()}
@@ -438,6 +536,10 @@ def _leader_follower_worker(run_id: str, item: dict[str, Any]) -> None:
             hz = max(1.0, min(60.0, float(ctx.get("loop_hz") or 60.0)))
             item["stop"].wait(1.0 / hz)
     finally:
+        try:
+            _request_follower_torque(item, False, force=True)
+        except Exception:
+            pass
         _release_role_session(item, "leader")
         _release_role_session(item, "follower")
 

@@ -6,6 +6,7 @@ extracting follow-target/leader-follower behavior into this adapter).
 """
 from __future__ import annotations
 
+import json
 import math
 import threading
 import time
@@ -533,6 +534,109 @@ def test_leader_follower_uses_native_joint_streams(monkeypatch):
     ]
     assert item["leader_transport"] == "native"
     assert item["follower_transport"] == "native"
+
+
+def test_leader_follower_arming_controls_only_follower_torque(monkeypatch):
+    class FakeSession:
+        def __init__(self, pose, config):
+            self.pose = pose
+            self.config = config
+            self.published = []
+
+        def snapshot(self):
+            return self.pose, self.config, 0.01
+
+        def wait_for_pose(self, timeout):
+            return self.pose
+
+        def wait_for_config(self, timeout):
+            return self.config
+
+        def publish(self, pose):
+            self.published.append(dict(pose))
+
+    leader_session = FakeSession(
+        {"shoulder_pan": 0.25},
+        {"torque_enabled": False},
+    )
+    follower_session = FakeSession(
+        {"shoulder_pan": 0.0},
+        {
+            "torque_enabled": False,
+            "commands_allowed": False,
+            "last_error": "",
+            "joints": {"shoulder_pan": {"lower": -1.0, "upper": 1.0}},
+        },
+    )
+    control_actions = []
+
+    def acquire(*signature, **kwargs):
+        return (
+            leader_session
+            if signature[0].startswith("/leader/")
+            else follower_session
+        )
+
+    def publish_string(topic, payload, timeout):
+        action = json.loads(payload)["action"]
+        control_actions.append((topic, action))
+        enabled = action == "exit_teach"
+        follower_session.config["torque_enabled"] = enabled
+        follower_session.config["commands_allowed"] = enabled
+        return {"ok": True}
+
+    monkeypatch.setattr(
+        leader_follower_runtime,
+        "_resolve_transport",
+        lambda ctx: "native",
+    )
+    monkeypatch.setattr(nr, "acquire_joint_stream", acquire)
+    monkeypatch.setattr(nr, "release_joint_stream", lambda *args, **kwargs: None)
+    monkeypatch.setattr(nr, "publish_string", publish_string)
+    item = {
+        "leader_session": None,
+        "follower_session": None,
+        "leader_signature": None,
+        "follower_signature": None,
+        "leader_transport": None,
+        "follower_transport": None,
+    }
+    ctx = {
+        "armed": True,
+        "transport": "auto",
+        "follower_robot": {
+            "state_topic": "/follower/joint_states",
+            "command_topic": "/follower/joint_commands",
+            "config_topic": "/follower/joint_config",
+            "control_topic": "/follower/robot_control",
+            "driver": {
+                "hardware_id": "FOLLOWER",
+                "calibration_path": "follower.json",
+            },
+        },
+        "require_calibration": True,
+        "require_leader_released": True,
+        "tracking_mode": "direct",
+    }
+
+    arming = leader_follower_runtime._leader_follower_step(item, ctx)
+    following = leader_follower_runtime._leader_follower_step(item, ctx)
+    disarming = leader_follower_runtime._leader_follower_step(
+        item,
+        {**ctx, "armed": False},
+    )
+
+    assert arming["commanded"] is False
+    assert arming["report"].startswith("ARMING:")
+    assert following["commanded"] is True
+    assert follower_session.published
+    assert disarming["commanded"] is False
+    assert disarming["report"].startswith("DISARMING:")
+    assert control_actions == [
+        ("/follower/robot_control", "exit_teach"),
+        ("/follower/robot_control", "enter_teach"),
+    ]
+    assert leader_session.config["torque_enabled"] is False
 
 
 def test_remote_leader_uses_separate_rosbridge_endpoint(monkeypatch):

@@ -17,7 +17,10 @@ two one-robot deployment templates:
   torque for hand guidance, and publishes its joint stream on ROS 2.
 - **SO-ARM102 Follower Deploy** starts the selected follower robot, reads the
   leader stream, and keeps follower motion disarmed until its `Armed` value is
-  explicitly enabled.
+  explicitly enabled. Enabling `Armed` seeds and enables holding torque on the
+  follower at its current pose before sending bounded joint targets. Disabling
+  `Armed`, stopping the controller, or shutting down the deployment explicitly
+  releases follower torque. The controller never enables leader torque.
 
 Deploy the leader first and the follower second. Linux deployments select
 native `rclpy`; two robots on one computer share its ROS 2 graph directly.
