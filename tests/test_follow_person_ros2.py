@@ -433,6 +433,8 @@ def test_leader_follower_previews_disarmed_and_commands_bounded_targets(monkeypa
     assert item["sample"]["observation"]["shoulder_pan"] == pytest.approx(0.0)
     assert item["sample"]["action"]["shoulder_pan"] == pytest.approx(math.radians(2.0))
     assert len(acquired) == 2
+    assert acquired[0][3] == ""
+    assert acquired[1][3] == "/follower/joint_commands"
 
     direct = leader_follower_runtime._leader_follower_step(item, {
         **base_ctx,
@@ -488,7 +490,7 @@ def test_leader_follower_uses_native_joint_streams(monkeypatch):
     acquired = []
 
     def acquire(*signature, **kwargs):
-        acquired.append(signature)
+        acquired.append((signature, kwargs))
         return leader_session if signature[0].startswith("/leader/") else follower_session
 
     monkeypatch.setattr(leader_follower_runtime, "_resolve_transport", lambda ctx: "native")
@@ -529,8 +531,24 @@ def test_leader_follower_uses_native_joint_streams(monkeypatch):
     assert result["live"] is True
     assert result["commanded"] is False
     assert acquired == [
-        ("/leader/joint_states", "/leader/joint_commands", "/leader/joint_config"),
-        ("/follower/joint_states", "/follower/joint_commands", "/follower/joint_config"),
+        (
+            ("/leader/joint_states", "", "/leader/joint_config"),
+            {
+                "timeout": 2.0,
+                "node_name": "blacknode_leader_follower_leader",
+            },
+        ),
+        (
+            (
+                "/follower/joint_states",
+                "/follower/joint_commands",
+                "/follower/joint_config",
+            ),
+            {
+                "timeout": 2.0,
+                "node_name": "blacknode_leader_follower_follower",
+            },
+        ),
     ]
     assert item["leader_transport"] == "native"
     assert item["follower_transport"] == "native"
@@ -709,6 +727,7 @@ def test_remote_leader_uses_separate_rosbridge_endpoint(monkeypatch):
 
     assert result["commanded"] is True
     assert acquired[0][:2] == ("leader.local", 9091)
+    assert acquired[0][3] == ""
     assert acquired[1][:2] == ("127.0.0.1", 9090)
     assert follower_session.published
 
