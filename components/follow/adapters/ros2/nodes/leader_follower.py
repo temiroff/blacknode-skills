@@ -62,7 +62,7 @@ def ros2_leader_follower(ctx: dict) -> dict:
 
 
 @node(
-    name="ROS2JointSubscribe",
+    name="ROS2SubscribeJointState",
     live=True,
     category=_CATEGORY,
     description="Maintain a managed ROS 2 JointState subscription and expose its fresh latest-value stream.",
@@ -92,7 +92,35 @@ def ros2_joint_subscribe(ctx: dict) -> dict:
 
 
 @node(
-    name="ROS2JointStatePublish",
+    name="ROS2JointSubscribe",
+    live=True,
+    hidden=True,
+    category=_CATEGORY,
+    description="Compatibility alias for ROS2SubscribeJointState.",
+    inputs={
+        "trigger": AnyPort,
+        "action": Enum(["start", "stop", "check"], default="start"),
+        "run_id": Text(default="joint_subscription"),
+        "robot": Dict,
+        "transport": Enum(["auto", "native", "rosbridge"], default="auto"),
+        "host": Text(default="127.0.0.1"),
+        "port": Int(default=9090),
+        "state_topic": Text(default="/joint_states"),
+        "config_topic": Text(default="/joint_config"),
+        "stale_after": Float(default=0.75),
+        "timeout": Float(default=10.0),
+    },
+    outputs={
+        "running": Bool, "live": Bool, "subscription": Dict,
+        "sample_stream": Dict, "pose": Dict, "age": Float, "report": Text,
+    },
+)
+def ros2_joint_subscribe_compat(ctx: dict) -> dict:
+    return ros2_joint_subscribe(ctx)
+
+
+@node(
+    name="ROS2PublishJointState",
     category=_CATEGORY,
     description="Expose the ROS 2 JointState publisher owned by a running Robot driver.",
     inputs={
@@ -143,10 +171,31 @@ def ros2_joint_state_publish(ctx: dict) -> dict:
 
 
 @node(
-    name="ROS2JointReplicate",
+    name="ROS2JointStatePublish",
+    hidden=True,
+    category=_CATEGORY,
+    description="Compatibility alias for ROS2PublishJointState.",
+    inputs={
+        "trigger": AnyPort,
+        "robot": Dict,
+        "state_topic": Text(default="/leader/joint_states"),
+    },
+    outputs={
+        "publishing": Bool,
+        "publisher": Dict,
+        "state_topic": Text,
+        "report": Text,
+    },
+)
+def ros2_joint_state_publish_compat(ctx: dict) -> dict:
+    return ros2_joint_state_publish(ctx)
+
+
+@node(
+    name="ROS2JointController",
     live=True,
     category=_CATEGORY,
-    description="Replicate a managed ROS 2 joint subscription onto a calibrated follower robot.",
+    description="Apply subscribed ROS 2 JointState commands to a calibrated robot, equivalent to the controller stage of a simulation action graph.",
     inputs={
         "trigger": AnyPort,
         "action": Enum(["start", "stop", "check"], default="start"),
@@ -192,11 +241,49 @@ def ros2_joint_replicate(ctx: dict) -> dict:
 
 
 @node(
+    name="ROS2JointReplicate",
+    live=True,
+    hidden=True,
+    category=_CATEGORY,
+    description="Compatibility alias for ROS2JointController.",
+    inputs={
+        "trigger": AnyPort,
+        "action": Enum(["start", "stop", "check"], default="start"),
+        "run_id": Text(default="joint_publisher"),
+        "control_topic": Text(default=""),
+        "subscription": Dict,
+        "robot": Dict,
+        "transport": Enum(["auto", "native", "rosbridge"], default="auto"),
+        "host": Text(default="127.0.0.1"),
+        "port": Int(default=9090),
+        "joint_map": Dict, "scale": Dict, "offset_deg": Dict,
+        "tracking_mode": Enum(["bounded", "direct"], default="direct"),
+        "loop_hz": Float(default=60.0),
+        "max_step_deg": Float(default=0.0),
+        "deadband_deg": Float(default=0.0),
+        "stale_after": Float(default=0.75),
+        "require_calibration": Bool(default=True),
+        "require_leader_released": Bool(default=True),
+        "armed": Bool(default=False),
+        "timeout": Float(default=10.0),
+    },
+    outputs={
+        "running": Bool, "live": Bool, "armed": Bool, "published": Bool,
+        "source_pose": Dict, "current_pose": Dict, "command": Dict,
+        "message_stream": Dict, "clamped": List, "joint_count": Int,
+        "dashboard": Image, "summary": Dict, "report": Text,
+    },
+)
+def ros2_joint_replicate_compat(ctx: dict) -> dict:
+    return ros2_joint_replicate(ctx)
+
+
+@node(
     name="ROS2JointPublish",
     live=True,
     hidden=True,
     category=_CATEGORY,
-    description="Compatibility alias for ROS2JointReplicate.",
+    description="Compatibility alias for ROS2JointController.",
     inputs={
         "trigger": AnyPort,
         "action": Enum(["start", "stop", "check"], default="start"),
@@ -234,7 +321,7 @@ def ros2_joint_publish(ctx: dict) -> dict:
     live=True,
     hidden=True,
     category=_CATEGORY,
-    description="Compatibility alias for ROS2JointSubscribe.",
+    description="Compatibility alias for ROS2SubscribeJointState.",
     inputs={
         "trigger": AnyPort,
         "action": Enum(["start", "stop", "check"], default="start"),
@@ -262,7 +349,7 @@ def ros2_leader_joint_subscriber(ctx: dict) -> dict:
     live=True,
     hidden=True,
     category=_CATEGORY,
-    description="Compatibility alias for ROS2JointPublish.",
+    description="Compatibility alias for ROS2JointController.",
     inputs={
         "trigger": AnyPort,
         "action": Enum(["start", "stop", "check"], default="start"),

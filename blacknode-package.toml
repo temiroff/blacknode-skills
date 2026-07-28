@@ -1,6 +1,6 @@
 [package]
 name = "blacknode-skills"
-version = "0.2.9"
+version = "0.3.0"
 description = "Reusable task-level robot skills composed from stable Blacknode capabilities."
 requires-blacknode = ">=0.3.0"
 layer = "skills"
@@ -34,6 +34,7 @@ nodes = ["components/follow/adapters/ros2/nodes"]
 templates = ["components/follow/adapters/ros2/templates"]
 node-types = [
   "RobotFollow", "ROS2FollowDetectionJoint", "ROS2LeaderFollower",
+  "ROS2PublishJointState", "ROS2SubscribeJointState", "ROS2JointController",
   "ROS2JointStatePublish", "ROS2JointSubscribe", "ROS2JointReplicate",
   "ROS2JointPublish",
   "ROS2LeaderJointSubscriber", "ROS2FollowerJointPublisher",

@@ -143,9 +143,9 @@ def test_visible_ros2_joint_pair_deploys_leader_and_follower():
     assert leader["node_meta"]["leader_robot"]["params"]["profile_id"] == "auto"
     assert leader["node_meta"]["leader_robot"]["params"]["read_only"] is True
     assert leader["node_meta"]["leader_robot"]["params"]["label"] == "Leader Robot"
-    assert leader["node_meta"]["publish"]["type"] == "ROS2JointStatePublish"
+    assert leader["node_meta"]["publish"]["type"] == "ROS2PublishJointState"
     assert leader["node_meta"]["publish"]["params"]["label"] == (
-        "ROS 2 Publish: /leader/joint_states"
+        "ROS 2 Publish Joint State"
     )
     assert leader["node_meta"]["publish"]["params"]["state_topic"] == (
         "/leader/joint_states"
@@ -159,16 +159,16 @@ def test_visible_ros2_joint_pair_deploys_leader_and_follower():
     )
     assert follower["node_meta"]["follower_robot"]["type"] == "Robot"
     assert follower["node_meta"]["follower_robot"]["params"]["read_only"] is False
-    assert follower["node_meta"]["subscribe"]["type"] == "ROS2JointSubscribe"
+    assert follower["node_meta"]["subscribe"]["type"] == "ROS2SubscribeJointState"
     assert follower["node_meta"]["subscribe"]["params"]["label"] == (
-        "ROS 2 Subscribe: /leader/joint_states"
+        "ROS 2 Subscribe Joint State"
     )
     assert follower["node_meta"]["subscribe"]["params"]["state_topic"] == (
         "/leader/joint_states"
     )
-    assert follower["node_meta"]["replicate"]["type"] == "ROS2JointReplicate"
+    assert follower["node_meta"]["replicate"]["type"] == "ROS2JointController"
     assert follower["node_meta"]["replicate"]["params"]["label"] == (
-        "Replicate subscribed movement"
+        "Joint Controller"
     )
     assert follower["node_meta"]["replicate"]["params"]["armed"] is False
     assert follower["node_meta"]["replicate"]["params"]["require_calibration"] is True
