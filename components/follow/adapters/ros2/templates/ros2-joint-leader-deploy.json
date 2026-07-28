@@ -1,7 +1,7 @@
 {
   "kind": "blacknode.workflow",
   "schema_version": 1,
-  "name": "ROS 2 Joint Leader Publish",
+  "name": "ROS 2 Leader Deploy",
   "saved_at": "2026-07-28T00:00:00",
   "entrypoint": {
     "node_id": "out",
@@ -32,8 +32,8 @@
       "blacknode-drivers/feetech@ros2"
     ],
     "deployment_pair": {
-      "id": "ros2_joint_transport",
-      "role": "publisher",
+      "id": "ros2_joint_leader_follower",
+      "role": "leader",
       "transport": "native",
       "state_topic": "/leader/joint_states",
       "message_type": "sensor_msgs/msg/JointState"

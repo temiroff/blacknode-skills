@@ -8,23 +8,25 @@ their executable nodes and dependency declarations are added.
 Planned components: `pick-place`, `follow`, `delivery`, `docking`, and
 `inspection`.
 
-## ROS 2 publish and subscribe deployment
+## ROS 2 leader and follower deployment
 
-The template gallery presents two small ROS 2 transport workflows:
+The template gallery presents two independently deployable ROS 2 workflows:
 
-- **ROS 2 Joint Leader Publish** starts the selected robot in read-only mode
+- **ROS 2 Leader Deploy** starts the selected robot in read-only mode
   and publishes its live joint state on `/leader/joint_states`.
-- **ROS 2 Joint Follower Subscribe** subscribes to
-  `/leader/joint_states` and exposes the latest received pose as its output.
+- **ROS 2 Follower Deploy** starts the selected follower robot, subscribes to
+  `/leader/joint_states`, and applies fresh calibrated poses after the
+  **Arm follower** control is explicitly enabled.
 
-The publisher preserves the selected robot's torque state. The subscriber is
-an observation workflow. Robot command and hand-guided teleoperation behavior
-remain available through the hidden compatibility templates for saved
-workflows.
+The leader publisher preserves the selected robot's torque state. The follower
+starts its robot driver, persistent subscription, and bounded command service
+as one deployment. Motion begins only after explicit authorization and stops
+when the source becomes stale.
 
 Start the publisher first and the subscriber second. Linux deployments use
 native `rclpy`. Systems on separate computers use the same ROS domain and a
 network that permits DDS discovery. `ROS2JointSubscribe` owns the persistent
-subscription and freshness state. `ROS2LeaderJointSubscriber` and
+subscription and freshness state. The follower's pose-application node owns
+the safety-gated local command stream. `ROS2LeaderJointSubscriber` and
 `ROS2FollowerJointPublisher` remain hidden compatibility aliases for saved
 workflows.

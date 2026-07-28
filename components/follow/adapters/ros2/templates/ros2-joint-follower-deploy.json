@@ -1,7 +1,7 @@
 {
   "kind": "blacknode.workflow",
   "schema_version": 1,
-  "name": "ROS 2 Joint Follower Subscribe",
+  "name": "ROS 2 Follower Deploy",
   "saved_at": "2026-07-28T00:00:00",
   "entrypoint": {
     "node_id": "out",
@@ -9,36 +9,60 @@
   },
   "metadata": {
     "template": true,
-    "description": "Subscribe to sensor_msgs/msg/JointState on /leader/joint_states using native ROS 2 and expose the latest received pose.",
+    "description": "Deploy the selected follower robot, subscribe to sensor_msgs/msg/JointState on /leader/joint_states, and apply fresh calibrated poses after explicit motion authorization.",
     "color": "#f59e0b",
+    "required_capabilities": [
+      "joint_group",
+      "position_feedback",
+      "servo_bus"
+    ],
     "required_packages": [
       "blacknode-skills",
       "blacknode-robot",
+      "blacknode-drivers",
+      "blacknode-controllers",
       "blacknode-ros2"
     ],
     "required_components": [
       "blacknode-skills/follow",
       "blacknode-robot/core",
+      "blacknode-drivers/feetech",
+      "blacknode-controllers/joint-control",
       "blacknode-ros2/core"
     ],
     "required_adapters": [
-      "blacknode-skills/follow@ros2"
+      "blacknode-skills/follow@ros2",
+      "blacknode-drivers/feetech@ros2",
+      "blacknode-controllers/joint-control@ros2"
     ],
     "deployment_pair": {
-      "id": "ros2_joint_transport",
-      "role": "subscriber",
+      "id": "ros2_joint_leader_follower",
+      "role": "follower",
       "transport": "native",
-      "state_topic": "/leader/joint_states",
+      "leader_state_topic": "/leader/joint_states",
+      "follower_command_topic": "/follower/joint_commands",
       "message_type": "sensor_msgs/msg/JointState"
     }
   },
   "node_meta": {
+    "follower_robot": {
+      "id": "follower_robot",
+      "type": "Robot",
+      "pos": [80, 220],
+      "params": {"label": "Follower Robot", "profile_id": "auto", "selection": 0, "action": "start", "run_id": "ros2_joint_follower_driver", "host": "127.0.0.1", "port": 9090, "state_topic": "/follower/joint_states", "command_topic": "/follower/joint_commands", "config_topic": "/follower/joint_config", "control_topic": "/follower/robot_control", "topic_prefix": "follower", "read_only": false, "rate_hz": 60.0, "units": "degrees"},
+      "inputs": ["trigger", "profile_id", "profile", "calibration", "selection", "hardware", "usb", "driver", "hardware_selection", "hardware_filter", "port_filter", "match_vendor_id", "match_product_id", "probe_open", "auto_discover", "action", "run_id", "require_hardware", "require_usb", "serial_port", "host", "port", "state_topic", "command_topic", "config_topic", "control_topic", "units", "topic_prefix", "read_only", "rate_hz"],
+      "outputs": ["found", "ready", "usb_ready", "driver_running", "port", "serial", "profile", "driver", "robot", "hardware", "usb", "devices", "recommended", "permissions", "calibration", "path", "report"],
+      "input_types": {"trigger": "Any", "profile_id": "Text", "profile": "Dict", "calibration": "Dict", "selection": "Int", "hardware": "Dict", "usb": "Dict", "driver": "Dict", "hardware_selection": "Int", "hardware_filter": "Text", "port_filter": "Text", "match_vendor_id": "Text", "match_product_id": "Text", "probe_open": "Bool", "auto_discover": "Bool", "action": "Text", "run_id": "Text", "require_hardware": "Bool", "require_usb": "Bool", "serial_port": "Text", "host": "Text", "port": "Int", "state_topic": "Text", "command_topic": "Text", "config_topic": "Text", "control_topic": "Text", "units": "Text", "topic_prefix": "Text", "read_only": "Bool", "rate_hz": "Float"},
+      "output_types": {"found": "Bool", "ready": "Bool", "usb_ready": "Bool", "driver_running": "Bool", "port": "Text", "serial": "Text", "profile": "Dict", "driver": "Dict", "robot": "Dict", "hardware": "Dict", "usb": "Dict", "devices": "List", "recommended": "Dict", "permissions": "Dict", "calibration": "Dict", "path": "Text", "report": "Text"},
+      "input_defaults": {"profile_id": "auto", "profile": {}, "calibration": {}, "selection": 0, "hardware": {}, "usb": {}, "driver": {}, "hardware_selection": 0, "hardware_filter": "", "port_filter": "", "match_vendor_id": "", "match_product_id": "", "probe_open": false, "auto_discover": true, "action": "check", "run_id": "robot_driver", "require_hardware": true, "require_usb": true, "serial_port": "", "host": "127.0.0.1", "port": 9090, "state_topic": "/joint_states", "command_topic": "/joint_commands", "config_topic": "/joint_config", "control_topic": "/robot_control", "units": "degrees", "topic_prefix": "", "read_only": false, "rate_hz": 0.0},
+      "input_choices": {"profile_id": ["auto", "so_arm101"], "action": ["check", "start", "stop"], "units": ["radians", "degrees"]}
+    },
     "subscribe": {
       "id": "subscribe",
       "type": "ROS2JointSubscribe",
       "pos": [
-        160,
-        180
+        600,
+        220
       ],
       "params": {
         "label": "ROS 2 Subscribe: /leader/joint_states",
@@ -120,15 +144,38 @@
         ]
       }
     },
+    "armed": {
+      "id": "armed",
+      "type": "Bool",
+      "pos": [1080, 80],
+      "params": {"value": false, "label": "Arm follower"},
+      "inputs": [],
+      "outputs": ["value"],
+      "input_types": {},
+      "output_types": {"value": "Bool"},
+      "input_defaults": {}
+    },
+    "apply_pose": {
+      "id": "apply_pose",
+      "type": "ROS2JointPublish",
+      "pos": [1080, 260],
+      "params": {"label": "Apply subscribed pose to follower", "action": "start", "run_id": "ros2_joint_follower_controller", "control_topic": "/blacknode/leader_follower/ros2_joint_follower_controller/control", "transport": "native", "host": "127.0.0.1", "port": 9090, "joint_map": {}, "scale": {}, "offset_deg": {}, "tracking_mode": "direct", "loop_hz": 60.0, "max_step_deg": 0.0, "deadband_deg": 0.0, "stale_after": 0.75, "require_calibration": true, "require_leader_released": false, "armed": false, "timeout": 10.0},
+      "inputs": ["trigger", "action", "run_id", "control_topic", "subscription", "robot", "transport", "host", "port", "joint_map", "scale", "offset_deg", "tracking_mode", "loop_hz", "max_step_deg", "deadband_deg", "stale_after", "require_calibration", "require_leader_released", "armed", "timeout"],
+      "outputs": ["running", "live", "armed", "published", "source_pose", "current_pose", "command", "message_stream", "clamped", "joint_count", "dashboard", "summary", "report"],
+      "input_types": {"trigger": "Any", "action": "Text", "run_id": "Text", "control_topic": "Text", "subscription": "Dict", "robot": "Dict", "transport": "Text", "host": "Text", "port": "Int", "joint_map": "Dict", "scale": "Dict", "offset_deg": "Dict", "tracking_mode": "Text", "loop_hz": "Float", "max_step_deg": "Float", "deadband_deg": "Float", "stale_after": "Float", "require_calibration": "Bool", "require_leader_released": "Bool", "armed": "Bool", "timeout": "Float"},
+      "output_types": {"running": "Bool", "live": "Bool", "armed": "Bool", "published": "Bool", "source_pose": "Dict", "current_pose": "Dict", "command": "Dict", "message_stream": "Dict", "clamped": "List", "joint_count": "Int", "dashboard": "Image", "summary": "Dict", "report": "Text"},
+      "input_defaults": {"action": "start", "run_id": "joint_publisher", "control_topic": "", "transport": "auto", "host": "127.0.0.1", "port": 9090, "joint_map": {}, "scale": {}, "offset_deg": {}, "tracking_mode": "direct", "loop_hz": 60.0, "max_step_deg": 0.0, "deadband_deg": 0.0, "stale_after": 0.75, "require_calibration": true, "require_leader_released": true, "armed": false, "timeout": 10.0},
+      "input_choices": {"action": ["start", "stop", "check"], "transport": ["auto", "native", "rosbridge"], "tracking_mode": ["bounded", "direct"]}
+    },
     "out": {
       "id": "out",
       "type": "Output",
       "pos": [
-        700,
-        180
+        1580,
+        260
       ],
       "params": {
-        "label": "Latest subscribed joint pose"
+        "label": "Follower deployment status"
       },
       "inputs": [
         "value"
@@ -143,8 +190,38 @@
   },
   "edges": [
     {
+      "from": "follower_robot",
+      "from_port": "report",
+      "to": "subscribe",
+      "to_port": "trigger"
+    },
+    {
+      "from": "follower_robot",
+      "from_port": "robot",
+      "to": "apply_pose",
+      "to_port": "robot"
+    },
+    {
       "from": "subscribe",
-      "from_port": "pose",
+      "from_port": "report",
+      "to": "apply_pose",
+      "to_port": "trigger"
+    },
+    {
+      "from": "subscribe",
+      "from_port": "subscription",
+      "to": "apply_pose",
+      "to_port": "subscription"
+    },
+    {
+      "from": "armed",
+      "from_port": "value",
+      "to": "apply_pose",
+      "to_port": "armed"
+    },
+    {
+      "from": "apply_pose",
+      "from_port": "summary",
       "to": "out",
       "to_port": "value"
     }
