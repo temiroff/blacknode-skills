@@ -155,11 +155,11 @@
       "output_types": {"value": "Bool"},
       "input_defaults": {}
     },
-    "apply_pose": {
-      "id": "apply_pose",
-      "type": "ROS2JointPublish",
+    "replicate": {
+      "id": "replicate",
+      "type": "ROS2JointReplicate",
       "pos": [1080, 260],
-      "params": {"label": "Apply subscribed pose to follower", "action": "start", "run_id": "ros2_joint_follower_controller", "control_topic": "/blacknode/leader_follower/ros2_joint_follower_controller/control", "transport": "native", "host": "127.0.0.1", "port": 9090, "joint_map": {}, "scale": {}, "offset_deg": {}, "tracking_mode": "direct", "loop_hz": 60.0, "max_step_deg": 0.0, "deadband_deg": 0.0, "stale_after": 0.75, "require_calibration": true, "require_leader_released": false, "armed": false, "timeout": 10.0},
+      "params": {"label": "Replicate subscribed movement", "action": "start", "run_id": "ros2_joint_follower_controller", "control_topic": "/blacknode/leader_follower/ros2_joint_follower_controller/control", "transport": "native", "host": "127.0.0.1", "port": 9090, "joint_map": {}, "scale": {}, "offset_deg": {}, "tracking_mode": "direct", "loop_hz": 60.0, "max_step_deg": 0.0, "deadband_deg": 0.0, "stale_after": 0.75, "require_calibration": true, "require_leader_released": false, "armed": false, "timeout": 10.0},
       "inputs": ["trigger", "action", "run_id", "control_topic", "subscription", "robot", "transport", "host", "port", "joint_map", "scale", "offset_deg", "tracking_mode", "loop_hz", "max_step_deg", "deadband_deg", "stale_after", "require_calibration", "require_leader_released", "armed", "timeout"],
       "outputs": ["running", "live", "armed", "published", "source_pose", "current_pose", "command", "message_stream", "clamped", "joint_count", "dashboard", "summary", "report"],
       "input_types": {"trigger": "Any", "action": "Text", "run_id": "Text", "control_topic": "Text", "subscription": "Dict", "robot": "Dict", "transport": "Text", "host": "Text", "port": "Int", "joint_map": "Dict", "scale": "Dict", "offset_deg": "Dict", "tracking_mode": "Text", "loop_hz": "Float", "max_step_deg": "Float", "deadband_deg": "Float", "stale_after": "Float", "require_calibration": "Bool", "require_leader_released": "Bool", "armed": "Bool", "timeout": "Float"},
@@ -198,29 +198,29 @@
     {
       "from": "follower_robot",
       "from_port": "robot",
-      "to": "apply_pose",
+      "to": "replicate",
       "to_port": "robot"
     },
     {
       "from": "subscribe",
       "from_port": "report",
-      "to": "apply_pose",
+      "to": "replicate",
       "to_port": "trigger"
     },
     {
       "from": "subscribe",
       "from_port": "subscription",
-      "to": "apply_pose",
+      "to": "replicate",
       "to_port": "subscription"
     },
     {
       "from": "armed",
       "from_port": "value",
-      "to": "apply_pose",
+      "to": "replicate",
       "to_port": "armed"
     },
     {
-      "from": "apply_pose",
+      "from": "replicate",
       "from_port": "summary",
       "to": "out",
       "to_port": "value"

@@ -92,10 +92,111 @@ def ros2_joint_subscribe(ctx: dict) -> dict:
 
 
 @node(
-    name="ROS2JointPublish",
+    name="ROS2JointStatePublish",
+    category=_CATEGORY,
+    description="Expose the ROS 2 JointState publisher owned by a running Robot driver.",
+    inputs={
+        "trigger": AnyPort,
+        "robot": Dict,
+        "state_topic": Text(default="/leader/joint_states"),
+    },
+    outputs={
+        "publishing": Bool,
+        "publisher": Dict,
+        "state_topic": Text,
+        "report": Text,
+    },
+)
+def ros2_joint_state_publish(ctx: dict) -> dict:
+    robot = dict(ctx.get("robot") or {})
+    driver = dict(robot.get("driver") or {})
+    configured_topic = str(robot.get("state_topic") or "").strip()
+    state_topic = str(ctx.get("state_topic") or configured_topic or "/leader/joint_states")
+    running = bool(driver.get("running"))
+    ready = bool(robot.get("ready"))
+    topic_matches = not configured_topic or configured_topic == state_topic
+    publishing = bool(running and ready and topic_matches)
+    publisher = {
+        "transport": str((robot.get("interface") or {}).get("kind") or driver.get("transport") or "ros2"),
+        "state_topic": state_topic,
+        "message_type": "sensor_msgs/msg/JointState",
+        "robot_run_id": str(driver.get("run_id") or ""),
+        "publishing": publishing,
+    }
+    if publishing:
+        report = f"ROS 2 JointState publisher active on {state_topic}"
+    elif not running:
+        report = "ROS 2 JointState publisher waiting for the Robot driver"
+    elif not ready:
+        report = "ROS 2 JointState publisher waiting for the Robot to become ready"
+    else:
+        report = (
+            f"ROS 2 JointState topic mismatch: Robot publishes {configured_topic}; "
+            f"publisher expects {state_topic}"
+        )
+    return {
+        "publishing": publishing,
+        "publisher": publisher,
+        "state_topic": state_topic,
+        "report": report,
+    }
+
+
+@node(
+    name="ROS2JointReplicate",
     live=True,
     category=_CATEGORY,
-    description="Publish safety-gated ROS 2 joint commands from a managed joint subscription.",
+    description="Replicate a managed ROS 2 joint subscription onto a calibrated follower robot.",
+    inputs={
+        "trigger": AnyPort,
+        "action": Enum(["start", "stop", "check"], default="start"),
+        "run_id": Text(default="joint_publisher"),
+        "control_topic": Text(default=""),
+        "subscription": Dict,
+        "robot": Dict,
+        "transport": Enum(["auto", "native", "rosbridge"], default="auto"),
+        "host": Text(default="127.0.0.1"),
+        "port": Int(default=9090),
+        "joint_map": Dict, "scale": Dict, "offset_deg": Dict,
+        "tracking_mode": Enum(["bounded", "direct"], default="direct"),
+        "loop_hz": Float(default=60.0),
+        "max_step_deg": Float(default=0.0),
+        "deadband_deg": Float(default=0.0),
+        "stale_after": Float(default=0.75),
+        "require_calibration": Bool(default=True),
+        "require_leader_released": Bool(default=True),
+        "armed": Bool(default=False),
+        "timeout": Float(default=10.0),
+    },
+    outputs={
+        "running": Bool, "live": Bool, "armed": Bool, "published": Bool,
+        "source_pose": Dict, "current_pose": Dict, "command": Dict,
+        "message_stream": Dict, "clamped": List, "joint_count": Int,
+        "dashboard": Image, "summary": Dict, "report": Text,
+    },
+)
+def ros2_joint_replicate(ctx: dict) -> dict:
+    result = leader_follower_runtime.run_leader_follower({
+        **ctx,
+        "leader_subscription": ctx.get("subscription"),
+        "follower_robot": ctx.get("robot"),
+    })
+    return {
+        **result,
+        "published": bool(result.get("commanded")),
+        "source_pose": dict(result.get("leader_pose") or {}),
+        "current_pose": dict(result.get("follower_pose") or {}),
+        "command": dict(result.get("target") or {}),
+        "message_stream": dict(result.get("sample_stream") or {}),
+    }
+
+
+@node(
+    name="ROS2JointPublish",
+    live=True,
+    hidden=True,
+    category=_CATEGORY,
+    description="Compatibility alias for ROS2JointReplicate.",
     inputs={
         "trigger": AnyPort,
         "action": Enum(["start", "stop", "check"], default="start"),
@@ -125,19 +226,7 @@ def ros2_joint_subscribe(ctx: dict) -> dict:
     },
 )
 def ros2_joint_publish(ctx: dict) -> dict:
-    result = leader_follower_runtime.run_leader_follower({
-        **ctx,
-        "leader_subscription": ctx.get("subscription"),
-        "follower_robot": ctx.get("robot"),
-    })
-    return {
-        **result,
-        "published": bool(result.get("commanded")),
-        "source_pose": dict(result.get("leader_pose") or {}),
-        "current_pose": dict(result.get("follower_pose") or {}),
-        "command": dict(result.get("target") or {}),
-        "message_stream": dict(result.get("sample_stream") or {}),
-    }
+    return ros2_joint_replicate(ctx)
 
 
 @node(
