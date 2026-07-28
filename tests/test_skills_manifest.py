@@ -79,7 +79,7 @@ def test_split_leader_follower_templates_are_one_robot_deployments():
     assert not any(edge["to_port"] == "selection" for edge in follower["edges"])
 
 
-def test_visible_ros2_joint_pair_is_transport_only():
+def test_visible_ros2_joint_pair_deploys_leader_and_follower():
     template_dir = (
         Path(__file__).resolve().parents[1]
         / "components" / "follow" / "adapters" / "ros2" / "templates"
@@ -115,23 +115,30 @@ def test_visible_ros2_joint_pair_is_transport_only():
         "ros2-joint-follower-deploy.json",
     }
     assert leader["metadata"]["deployment_pair"] == {
-        "id": "ros2_joint_transport",
-        "role": "publisher",
+        "id": "ros2_joint_leader_follower",
+        "role": "leader",
         "transport": "native",
         "state_topic": "/leader/joint_states",
         "message_type": "sensor_msgs/msg/JointState",
     }
     assert follower["metadata"]["deployment_pair"] == {
-        "id": "ros2_joint_transport",
-        "role": "subscriber",
+        "id": "ros2_joint_leader_follower",
+        "role": "follower",
         "transport": "native",
-        "state_topic": "/leader/joint_states",
+        "leader_state_topic": "/leader/joint_states",
+        "follower_command_topic": "/follower/joint_commands",
         "message_type": "sensor_msgs/msg/JointState",
     }
-    assert leader["name"] == "ROS 2 Joint Leader Publish"
-    assert follower["name"] == "ROS 2 Joint Follower Subscribe"
+    assert leader["name"] == "ROS 2 Leader Deploy"
+    assert follower["name"] == "ROS 2 Follower Deploy"
     assert set(leader["node_meta"]) == {"publish", "out"}
-    assert set(follower["node_meta"]) == {"subscribe", "out"}
+    assert set(follower["node_meta"]) == {
+        "follower_robot",
+        "subscribe",
+        "armed",
+        "apply_pose",
+        "out",
+    }
     assert leader["node_meta"]["publish"]["type"] == "Robot"
     assert leader["node_meta"]["publish"]["params"]["profile_id"] == "auto"
     assert leader["node_meta"]["publish"]["params"]["read_only"] is True
@@ -145,6 +152,8 @@ def test_visible_ros2_joint_pair_is_transport_only():
         node["type"] not in {"ROS2ManualMove", "ROS2JointPublish"}
         for node in leader["node_meta"].values()
     )
+    assert follower["node_meta"]["follower_robot"]["type"] == "Robot"
+    assert follower["node_meta"]["follower_robot"]["params"]["read_only"] is False
     assert follower["node_meta"]["subscribe"]["type"] == "ROS2JointSubscribe"
     assert follower["node_meta"]["subscribe"]["params"]["label"] == (
         "ROS 2 Subscribe: /leader/joint_states"
@@ -152,14 +161,31 @@ def test_visible_ros2_joint_pair_is_transport_only():
     assert follower["node_meta"]["subscribe"]["params"]["state_topic"] == (
         "/leader/joint_states"
     )
-    assert all(
-        node["type"] not in {"Robot", "Bool", "ROS2JointPublish", "ROS2ManualMove"}
-        for node in follower["node_meta"].values()
+    assert follower["node_meta"]["apply_pose"]["type"] == "ROS2JointPublish"
+    assert follower["node_meta"]["apply_pose"]["params"]["label"] == (
+        "Apply subscribed pose to follower"
     )
+    assert follower["node_meta"]["apply_pose"]["params"]["armed"] is False
+    assert follower["node_meta"]["apply_pose"]["params"]["require_calibration"] is True
+    assert (
+        follower["node_meta"]["apply_pose"]["params"]["require_leader_released"]
+        is False
+    )
+    assert follower["node_meta"]["armed"]["params"] == {
+        "value": False,
+        "label": "Arm follower",
+    }
     assert any(
         edge["from"] == "subscribe"
-        and edge["from_port"] == "pose"
-        and edge["to"] == "out"
-        and edge["to_port"] == "value"
+        and edge["from_port"] == "subscription"
+        and edge["to"] == "apply_pose"
+        and edge["to_port"] == "subscription"
+        for edge in follower["edges"]
+    )
+    assert any(
+        edge["from"] == "follower_robot"
+        and edge["from_port"] == "robot"
+        and edge["to"] == "apply_pose"
+        and edge["to_port"] == "robot"
         for edge in follower["edges"]
     )
