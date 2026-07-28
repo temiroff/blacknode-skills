@@ -41,6 +41,9 @@ def test_follow_person_ros2_nodes_registered_with_category():
         "ROS2FollowDetectionJoint",
         "RobotFollow",
         "ROS2LeaderFollower",
+        "ROS2PublishJointState",
+        "ROS2SubscribeJointState",
+        "ROS2JointController",
         "ROS2JointStatePublish",
         "ROS2JointSubscribe",
         "ROS2JointReplicate",
@@ -52,9 +55,12 @@ def test_follow_person_ros2_nodes_registered_with_category():
         assert _NODE_REGISTRY[name]._bn_category == "Skills"
         assert _NODE_REGISTRY[name]._bn_package == "blacknode-skills"
     assert _NODE_REGISTRY["ROS2NativeFollowDetectionJoint"]._bn_hidden is True
-    assert _NODE_REGISTRY["ROS2JointStatePublish"]._bn_hidden is False
-    assert _NODE_REGISTRY["ROS2JointSubscribe"]._bn_hidden is False
-    assert _NODE_REGISTRY["ROS2JointReplicate"]._bn_hidden is False
+    assert _NODE_REGISTRY["ROS2PublishJointState"]._bn_hidden is False
+    assert _NODE_REGISTRY["ROS2SubscribeJointState"]._bn_hidden is False
+    assert _NODE_REGISTRY["ROS2JointController"]._bn_hidden is False
+    assert _NODE_REGISTRY["ROS2JointStatePublish"]._bn_hidden is True
+    assert _NODE_REGISTRY["ROS2JointSubscribe"]._bn_hidden is True
+    assert _NODE_REGISTRY["ROS2JointReplicate"]._bn_hidden is True
     assert _NODE_REGISTRY["ROS2JointPublish"]._bn_hidden is True
     assert _NODE_REGISTRY["ROS2LeaderJointSubscriber"]._bn_hidden is True
     assert _NODE_REGISTRY["ROS2FollowerJointPublisher"]._bn_hidden is True
@@ -79,7 +85,7 @@ def test_managed_leader_subscription_exposes_a_fresh_stream(monkeypatch):
     )
     leader_subscription_runtime.stop_leader_subscription_services()
     try:
-        result = _NODE_REGISTRY["ROS2JointSubscribe"]({
+        result = _NODE_REGISTRY["ROS2SubscribeJointState"]({
             "action": "start",
             "run_id": "test_joint_subscription",
             "transport": "native",
@@ -163,7 +169,7 @@ def test_split_follower_publisher_consumes_managed_subscription(monkeypatch):
 
 
 def test_joint_state_publisher_exposes_running_robot_publication():
-    result = _NODE_REGISTRY["ROS2JointStatePublish"]({
+    result = _NODE_REGISTRY["ROS2PublishJointState"]({
         "robot": {
             "ready": True,
             "state_topic": "/leader/joint_states",
@@ -183,7 +189,7 @@ def test_joint_state_publisher_exposes_running_robot_publication():
 
 
 def test_joint_state_publisher_rejects_topic_mismatch():
-    result = _NODE_REGISTRY["ROS2JointStatePublish"]({
+    result = _NODE_REGISTRY["ROS2PublishJointState"]({
         "robot": {
             "ready": True,
             "state_topic": "/other/joint_states",
@@ -218,7 +224,7 @@ def test_generic_joint_replicator_exposes_role_neutral_ports(monkeypatch):
         }
 
     monkeypatch.setattr(leader_follower_runtime, "run_leader_follower", run)
-    result = _NODE_REGISTRY["ROS2JointReplicate"]({
+    result = _NODE_REGISTRY["ROS2JointController"]({
         "subscription": {"run_id": "source"},
         "robot": {"command_topic": "/joint_commands"},
         "armed": True,
@@ -238,6 +244,12 @@ def test_generic_joint_replicator_exposes_role_neutral_ports(monkeypatch):
         "armed": True,
     })
     assert compatibility["published"] is True
+    replicate_compatibility = _NODE_REGISTRY["ROS2JointReplicate"]({
+        "subscription": {"run_id": "source"},
+        "robot": {"command_topic": "/joint_commands"},
+        "armed": True,
+    })
+    assert replicate_compatibility["published"] is True
 
 
 def test_native_follow_detection_joint_blocked_when_disarmed(monkeypatch):

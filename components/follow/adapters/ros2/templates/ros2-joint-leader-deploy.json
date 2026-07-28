@@ -215,13 +215,13 @@
     },
     "publish": {
       "id": "publish",
-      "type": "ROS2JointStatePublish",
+      "type": "ROS2PublishJointState",
       "pos": [
         700,
         180
       ],
       "params": {
-        "label": "ROS 2 Publish: /leader/joint_states",
+        "label": "ROS 2 Publish Joint State",
         "state_topic": "/leader/joint_states"
       },
       "inputs": [
