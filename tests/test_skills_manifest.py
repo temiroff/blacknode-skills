@@ -106,9 +106,30 @@ def test_native_ros2_joint_pair_uses_one_shared_safe_topic_contract():
     }
     assert leader["node_meta"]["leader_robot"]["params"]["profile_id"] == "auto"
     assert leader["node_meta"]["leader_robot"]["params"]["read_only"] is True
+    assert leader["node_meta"]["leader_robot"]["params"]["label"] == (
+        "Leader ROS 2 state publisher"
+    )
+    assert leader["node_meta"]["leader_state_subscriber"]["type"] == "ROS2TopicEcho"
+    assert leader["node_meta"]["leader_state_subscriber"]["params"]["topic"] == (
+        "/leader/joint_states"
+    )
     assert leader["node_meta"]["release_leader"]["params"]["action"] == "release"
     assert follower["node_meta"]["follower_robot"]["params"]["profile_id"] == "auto"
+    assert follower["node_meta"]["follower_robot"]["params"]["label"] == (
+        "Follower ROS 2 driver"
+    )
+    assert follower["node_meta"]["follower_state_subscriber"]["type"] == "ROS2TopicEcho"
+    assert follower["node_meta"]["follower_state_subscriber"]["params"]["topic"] == (
+        "/follower/joint_states"
+    )
+    assert follower["node_meta"]["leader_state_subscriber"]["type"] == "ROS2TopicEcho"
+    assert follower["node_meta"]["leader_state_subscriber"]["params"]["topic"] == (
+        "/leader/joint_states"
+    )
     assert follower["node_meta"]["follow"]["params"]["transport"] == "native"
+    assert follower["node_meta"]["follow"]["params"]["label"] == (
+        "Subscribe leader → safe follower publish"
+    )
     assert follower["node_meta"]["follow"]["params"]["placement"] == "separate_devices"
     assert follower["node_meta"]["follow"]["params"]["armed"] is False
     assert follower["node_meta"]["follow"]["params"]["require_calibration"] is True
