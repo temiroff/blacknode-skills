@@ -1,15 +1,15 @@
 {
   "kind": "blacknode.workflow",
   "schema_version": 1,
-  "name": "ROS 2 Joint Leader Deploy",
-  "saved_at": "2026-07-27T00:00:00",
+  "name": "ROS 2 Joint Leader Publish",
+  "saved_at": "2026-07-28T00:00:00",
   "entrypoint": {
     "node_id": "out",
     "port": "value"
   },
   "metadata": {
     "template": true,
-    "description": "Deploy a calibrated joint robot as a native ROS 2 leader. The hardware driver publishes sensor_msgs/msg/JointState on /leader/joint_states and the leader is torque-released for hand guidance. Pair it with ROS 2 Joint Follower Deploy on the same ROS_DOMAIN_ID and DDS network.",
+    "description": "Publish the selected robot's live joint state on /leader/joint_states using native ROS 2. The robot stays read-only and preserves its current torque state.",
     "color": "#14b8a6",
     "required_capabilities": [
       "joint_group",
@@ -20,121 +20,39 @@
       "blacknode-skills",
       "blacknode-robot",
       "blacknode-drivers",
-      "blacknode-controllers",
       "blacknode-ros2"
     ],
     "required_components": [
       "blacknode-skills/follow",
       "blacknode-robot/core",
       "blacknode-drivers/feetech",
-      "blacknode-controllers/joint-control",
-      "blacknode-ros2/core",
-      "blacknode-ros2/diagnostics"
+      "blacknode-ros2/core"
     ],
     "required_adapters": [
-      "blacknode-drivers/feetech@ros2",
-      "blacknode-controllers/joint-control@ros2"
+      "blacknode-drivers/feetech@ros2"
     ],
     "deployment_pair": {
-      "id": "ros2_joint_leader_follower",
-      "role": "leader",
+      "id": "ros2_joint_transport",
+      "role": "publisher",
       "transport": "native",
       "state_topic": "/leader/joint_states",
       "message_type": "sensor_msgs/msg/JointState"
     }
   },
   "node_meta": {
-    "ros2": {
-      "id": "ros2",
-      "type": "ROS2Status",
-      "pos": [
-        80,
-        160
-      ],
-      "params": {
-        "label": "ROS 2 graph preflight",
-        "transport": "native",
-        "ensure_rosbridge": false,
-        "expose_lan": false,
-        "host": "127.0.0.1",
-        "port": 9090,
-        "state_topic": "/leader/joint_states",
-        "command_topic": "/leader/joint_commands",
-        "config_topic": "/leader/joint_config",
-        "timeout": 10.0
-      },
-      "inputs": [
-        "trigger",
-        "transport",
-        "ensure_rosbridge",
-        "expose_lan",
-        "host",
-        "port",
-        "state_topic",
-        "command_topic",
-        "config_topic",
-        "timeout"
-      ],
-      "outputs": [
-        "connected",
-        "ready",
-        "transport",
-        "topics",
-        "config",
-        "report"
-      ],
-      "input_types": {
-        "trigger": "Any",
-        "transport": "Text",
-        "ensure_rosbridge": "Bool",
-        "expose_lan": "Bool",
-        "host": "Text",
-        "port": "Int",
-        "state_topic": "Text",
-        "command_topic": "Text",
-        "config_topic": "Text",
-        "timeout": "Float"
-      },
-      "output_types": {
-        "connected": "Bool",
-        "ready": "Bool",
-        "transport": "Text",
-        "topics": "List",
-        "config": "Dict",
-        "report": "Text"
-      },
-      "input_defaults": {
-        "transport": "auto",
-        "ensure_rosbridge": true,
-        "expose_lan": false,
-        "host": "127.0.0.1",
-        "port": 9090,
-        "state_topic": "/joint_states",
-        "command_topic": "/joint_commands",
-        "config_topic": "/joint_config",
-        "timeout": 10.0
-      },
-      "input_choices": {
-        "transport": [
-          "auto",
-          "native",
-          "rosbridge"
-        ]
-      }
-    },
-    "leader_robot": {
-      "id": "leader_robot",
+    "publish": {
+      "id": "publish",
       "type": "Robot",
       "pos": [
-        520,
-        160
+        160,
+        180
       ],
       "params": {
-        "label": "Leader ROS 2 state publisher",
+        "label": "ROS 2 Publish: /leader/joint_states",
         "profile_id": "auto",
         "selection": 0,
         "action": "start",
-        "run_id": "ros2_joint_leader_driver",
+        "run_id": "ros2_joint_leader_publisher",
         "host": "127.0.0.1",
         "port": 9090,
         "state_topic": "/leader/joint_states",
@@ -295,122 +213,15 @@
         ]
       }
     },
-    "release_leader": {
-      "id": "release_leader",
-      "type": "ROS2ManualMove",
-      "pos": [
-        980,
-        160
-      ],
-      "params": {
-        "label": "ROS 2: Release leader torque",
-        "run_id": "ros2_joint_leader_pose",
-        "action": "release",
-        "transport": "native",
-        "host": "127.0.0.1",
-        "port": 9090,
-        "state_topic": "/leader/joint_states",
-        "config_topic": "/leader/joint_config",
-        "control_topic": "/leader/robot_control",
-        "units": "degrees",
-        "live_monitor": false,
-        "timeout": 5.0
-      },
-      "inputs": [
-        "trigger",
-        "run_id",
-        "action",
-        "transport",
-        "robot",
-        "host",
-        "port",
-        "state_topic",
-        "config_topic",
-        "control_topic",
-        "units",
-        "live_monitor",
-        "timeout"
-      ],
-      "outputs": [
-        "action",
-        "live",
-        "data_ready",
-        "mode",
-        "torque_enabled",
-        "command_ok",
-        "pose",
-        "joints",
-        "updated_at",
-        "dashboard",
-        "report"
-      ],
-      "input_types": {
-        "trigger": "Any",
-        "run_id": "Text",
-        "action": "Text",
-        "transport": "Text",
-        "robot": "Dict",
-        "host": "Text",
-        "port": "Int",
-        "state_topic": "Text",
-        "config_topic": "Text",
-        "control_topic": "Text",
-        "units": "Text",
-        "live_monitor": "Bool",
-        "timeout": "Float"
-      },
-      "output_types": {
-        "action": "Text",
-        "live": "Bool",
-        "data_ready": "Bool",
-        "mode": "Text",
-        "torque_enabled": "Bool",
-        "command_ok": "Bool",
-        "pose": "Dict",
-        "joints": "List",
-        "updated_at": "Text",
-        "dashboard": "Image",
-        "report": "Text"
-      },
-      "input_defaults": {
-        "run_id": "robot_teach",
-        "action": "check",
-        "transport": "auto",
-        "host": "127.0.0.1",
-        "port": 9090,
-        "state_topic": "/joint_states",
-        "config_topic": "/joint_config",
-        "control_topic": "/robot_control",
-        "units": "degrees",
-        "live_monitor": true,
-        "timeout": 5.0
-      },
-      "input_choices": {
-        "action": [
-          "check",
-          "release",
-          "hold"
-        ],
-        "transport": [
-          "auto",
-          "native",
-          "rosbridge"
-        ],
-        "units": [
-          "radians",
-          "degrees"
-        ]
-      }
-    },
     "out": {
       "id": "out",
       "type": "Output",
       "pos": [
-        1420,
-        160
+        700,
+        180
       ],
       "params": {
-        "label": "Native ROS 2 leader status"
+        "label": "ROS 2 publisher status"
       },
       "inputs": [
         "value"
@@ -425,25 +236,7 @@
   },
   "edges": [
     {
-      "from": "ros2",
-      "from_port": "report",
-      "to": "leader_robot",
-      "to_port": "trigger"
-    },
-    {
-      "from": "leader_robot",
-      "from_port": "robot",
-      "to": "release_leader",
-      "to_port": "robot"
-    },
-    {
-      "from": "leader_robot",
-      "from_port": "report",
-      "to": "release_leader",
-      "to_port": "trigger"
-    },
-    {
-      "from": "release_leader",
+      "from": "publish",
       "from_port": "report",
       "to": "out",
       "to_port": "value"

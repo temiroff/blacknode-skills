@@ -79,7 +79,7 @@ def test_split_leader_follower_templates_are_one_robot_deployments():
     assert not any(edge["to_port"] == "selection" for edge in follower["edges"])
 
 
-def test_native_ros2_joint_pair_uses_one_shared_safe_topic_contract():
+def test_visible_ros2_joint_pair_is_transport_only():
     template_dir = (
         Path(__file__).resolve().parents[1]
         / "components" / "follow" / "adapters" / "ros2" / "templates"
@@ -115,54 +115,51 @@ def test_native_ros2_joint_pair_uses_one_shared_safe_topic_contract():
         "ros2-joint-follower-deploy.json",
     }
     assert leader["metadata"]["deployment_pair"] == {
-        "id": "ros2_joint_leader_follower",
-        "role": "leader",
+        "id": "ros2_joint_transport",
+        "role": "publisher",
         "transport": "native",
         "state_topic": "/leader/joint_states",
         "message_type": "sensor_msgs/msg/JointState",
     }
     assert follower["metadata"]["deployment_pair"] == {
-        "id": "ros2_joint_leader_follower",
-        "role": "follower",
+        "id": "ros2_joint_transport",
+        "role": "subscriber",
         "transport": "native",
-        "leader_state_topic": "/leader/joint_states",
-        "follower_command_topic": "/follower/joint_commands",
+        "state_topic": "/leader/joint_states",
         "message_type": "sensor_msgs/msg/JointState",
     }
-    assert leader["node_meta"]["leader_robot"]["params"]["profile_id"] == "auto"
-    assert leader["node_meta"]["leader_robot"]["params"]["read_only"] is True
-    assert leader["node_meta"]["leader_robot"]["params"]["label"] == (
-        "Leader ROS 2 state publisher"
+    assert leader["name"] == "ROS 2 Joint Leader Publish"
+    assert follower["name"] == "ROS 2 Joint Follower Subscribe"
+    assert set(leader["node_meta"]) == {"publish", "out"}
+    assert set(follower["node_meta"]) == {"subscribe", "out"}
+    assert leader["node_meta"]["publish"]["type"] == "Robot"
+    assert leader["node_meta"]["publish"]["params"]["profile_id"] == "auto"
+    assert leader["node_meta"]["publish"]["params"]["read_only"] is True
+    assert leader["node_meta"]["publish"]["params"]["label"] == (
+        "ROS 2 Publish: /leader/joint_states"
     )
-    assert "leader_state_subscriber" not in leader["node_meta"]
-    assert leader["node_meta"]["release_leader"]["params"]["action"] == "release"
-    assert leader["node_meta"]["release_leader"]["params"]["label"] == (
-        "ROS 2: Release leader torque"
+    assert leader["node_meta"]["publish"]["params"]["state_topic"] == (
+        "/leader/joint_states"
     )
-    assert leader["node_meta"]["release_leader"]["params"]["live_monitor"] is False
-    assert follower["node_meta"]["follower_robot"]["params"]["profile_id"] == "auto"
-    assert follower["node_meta"]["follower_robot"]["params"]["label"] == (
-        "Follower ROS 2 driver"
+    assert all(
+        node["type"] not in {"ROS2ManualMove", "ROS2JointPublish"}
+        for node in leader["node_meta"].values()
     )
     assert follower["node_meta"]["subscribe"]["type"] == "ROS2JointSubscribe"
     assert follower["node_meta"]["subscribe"]["params"]["label"] == (
-        "ROS 2 Subscribe"
+        "ROS 2 Subscribe: /leader/joint_states"
     )
     assert follower["node_meta"]["subscribe"]["params"]["state_topic"] == (
         "/leader/joint_states"
     )
-    assert follower["node_meta"]["publish"]["type"] == "ROS2JointPublish"
-    assert follower["node_meta"]["publish"]["params"]["transport"] == "native"
-    assert follower["node_meta"]["publish"]["params"]["label"] == (
-        "ROS 2 Publish"
+    assert all(
+        node["type"] not in {"Robot", "Bool", "ROS2JointPublish", "ROS2ManualMove"}
+        for node in follower["node_meta"].values()
     )
     assert any(
         edge["from"] == "subscribe"
-        and edge["from_port"] == "subscription"
-        and edge["to"] == "publish"
-        and edge["to_port"] == "subscription"
+        and edge["from_port"] == "pose"
+        and edge["to"] == "out"
+        and edge["to_port"] == "value"
         for edge in follower["edges"]
     )
-    assert follower["node_meta"]["publish"]["params"]["armed"] is False
-    assert follower["node_meta"]["publish"]["params"]["require_calibration"] is True
-    assert follower["node_meta"]["publish"]["params"]["require_leader_released"] is True
