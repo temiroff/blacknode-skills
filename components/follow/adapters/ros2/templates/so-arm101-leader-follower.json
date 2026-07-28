@@ -412,16 +412,105 @@
         ]
       }
     },
-    "follow": {
-      "id": "follow",
-      "type": "ROS2LeaderFollower",
+    "subscribe": {
+      "id": "subscribe",
+      "type": "ROS2JointSubscribe",
       "pos": [
-        1640,
+        1580,
+        240
+      ],
+      "params": {
+        "label": "ROS 2 Subscribe",
+        "action": "start",
+        "run_id": "so_arm_joint_subscription",
+        "transport": "rosbridge",
+        "host": "127.0.0.1",
+        "port": 9090,
+        "state_topic": "/leader/joint_states",
+        "config_topic": "/leader/joint_config",
+        "stale_after": 0.75,
+        "timeout": 10.0
+      },
+      "inputs": [
+        "trigger",
+        "action",
+        "run_id",
+        "robot",
+        "transport",
+        "host",
+        "port",
+        "state_topic",
+        "config_topic",
+        "stale_after",
+        "timeout"
+      ],
+      "outputs": [
+        "running",
+        "live",
+        "subscription",
+        "sample_stream",
+        "pose",
+        "age",
+        "report"
+      ],
+      "input_types": {
+        "trigger": "Any",
+        "action": "Text",
+        "run_id": "Text",
+        "robot": "Dict",
+        "transport": "Text",
+        "host": "Text",
+        "port": "Int",
+        "state_topic": "Text",
+        "config_topic": "Text",
+        "stale_after": "Float",
+        "timeout": "Float"
+      },
+      "output_types": {
+        "running": "Bool",
+        "live": "Bool",
+        "subscription": "Dict",
+        "sample_stream": "Dict",
+        "pose": "Dict",
+        "age": "Float",
+        "report": "Text"
+      },
+      "input_defaults": {
+        "action": "start",
+        "run_id": "joint_subscription",
+        "transport": "auto",
+        "host": "127.0.0.1",
+        "port": 9090,
+        "state_topic": "/joint_states",
+        "config_topic": "/joint_config",
+        "stale_after": 0.75,
+        "timeout": 10.0
+      },
+      "input_choices": {
+        "action": [
+          "start",
+          "stop",
+          "check"
+        ],
+        "transport": [
+          "auto",
+          "native",
+          "rosbridge"
+        ]
+      }
+    },
+    "publish": {
+      "id": "publish",
+      "type": "ROS2JointPublish",
+      "pos": [
+        1980,
         360
       ],
       "params": {
+        "label": "ROS 2 Publish",
         "action": "start",
-        "run_id": "so_arm_leader_follower",
+        "run_id": "so_arm_joint_publisher",
+        "control_topic": "/blacknode/leader_follower/so_arm_joint_publisher/control",
         "transport": "rosbridge",
         "host": "127.0.0.1",
         "port": 9090,
@@ -442,8 +531,9 @@
         "trigger",
         "action",
         "run_id",
-        "leader_robot",
-        "follower_robot",
+        "control_topic",
+        "subscription",
+        "robot",
         "transport",
         "host",
         "port",
@@ -464,10 +554,11 @@
         "running",
         "live",
         "armed",
-        "commanded",
-        "leader_pose",
-        "follower_pose",
-        "target",
+        "published",
+        "source_pose",
+        "current_pose",
+        "command",
+        "message_stream",
         "clamped",
         "joint_count",
         "dashboard",
@@ -478,8 +569,9 @@
         "trigger": "Any",
         "action": "Text",
         "run_id": "Text",
-        "leader_robot": "Dict",
-        "follower_robot": "Dict",
+        "control_topic": "Text",
+        "subscription": "Dict",
+        "robot": "Dict",
         "transport": "Text",
         "host": "Text",
         "port": "Int",
@@ -500,10 +592,11 @@
         "running": "Bool",
         "live": "Bool",
         "armed": "Bool",
-        "commanded": "Bool",
-        "leader_pose": "Dict",
-        "follower_pose": "Dict",
-        "target": "Dict",
+        "published": "Bool",
+        "source_pose": "Dict",
+        "current_pose": "Dict",
+        "command": "Dict",
+        "message_stream": "Dict",
         "clamped": "List",
         "joint_count": "Int",
         "dashboard": "Image",
@@ -512,8 +605,9 @@
       },
       "input_defaults": {
         "action": "start",
-        "run_id": "so_arm_leader_follower",
-        "transport": "rosbridge",
+        "run_id": "joint_publisher",
+        "control_topic": "",
+        "transport": "auto",
         "host": "127.0.0.1",
         "port": 9090,
         "joint_map": {},
@@ -550,7 +644,7 @@
       "id": "out",
       "type": "Output",
       "pos": [
-        2080,
+        2420,
         360
       ],
       "params": {
@@ -574,8 +668,8 @@
         "label": "Armed"
       },
       "pos": [
-        1440,
-        360
+        1780,
+        120
       ],
       "inputs": [],
       "outputs": [
@@ -592,7 +686,7 @@
     {
       "from": "armed",
       "from_port": "value",
-      "to": "follow",
+      "to": "publish",
       "to_port": "armed"
     },
     {
@@ -622,23 +716,35 @@
     {
       "from": "leader_release",
       "from_port": "report",
-      "to": "follow",
+      "to": "subscribe",
       "to_port": "trigger"
     },
     {
       "from": "leader_robot",
       "from_port": "robot",
-      "to": "follow",
-      "to_port": "leader_robot"
+      "to": "subscribe",
+      "to_port": "robot"
     },
     {
       "from": "follower_robot",
       "from_port": "robot",
-      "to": "follow",
-      "to_port": "follower_robot"
+      "to": "publish",
+      "to_port": "robot"
     },
     {
-      "from": "follow",
+      "from": "subscribe",
+      "from_port": "report",
+      "to": "publish",
+      "to_port": "trigger"
+    },
+    {
+      "from": "subscribe",
+      "from_port": "subscription",
+      "to": "publish",
+      "to_port": "subscription"
+    },
+    {
+      "from": "publish",
       "from_port": "summary",
       "to": "out",
       "to_port": "value"

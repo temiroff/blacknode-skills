@@ -41,6 +41,8 @@ def test_follow_person_ros2_nodes_registered_with_category():
         "ROS2FollowDetectionJoint",
         "RobotFollow",
         "ROS2LeaderFollower",
+        "ROS2JointSubscribe",
+        "ROS2JointPublish",
         "ROS2LeaderJointSubscriber",
         "ROS2FollowerJointPublisher",
     ]:
@@ -48,6 +50,10 @@ def test_follow_person_ros2_nodes_registered_with_category():
         assert _NODE_REGISTRY[name]._bn_category == "Skills"
         assert _NODE_REGISTRY[name]._bn_package == "blacknode-skills"
     assert _NODE_REGISTRY["ROS2NativeFollowDetectionJoint"]._bn_hidden is True
+    assert _NODE_REGISTRY["ROS2JointSubscribe"]._bn_hidden is False
+    assert _NODE_REGISTRY["ROS2JointPublish"]._bn_hidden is False
+    assert _NODE_REGISTRY["ROS2LeaderJointSubscriber"]._bn_hidden is True
+    assert _NODE_REGISTRY["ROS2FollowerJointPublisher"]._bn_hidden is True
 
 
 def test_managed_leader_subscription_exposes_a_fresh_stream(monkeypatch):
@@ -69,16 +75,16 @@ def test_managed_leader_subscription_exposes_a_fresh_stream(monkeypatch):
     )
     leader_subscription_runtime.stop_leader_subscription_services()
     try:
-        result = _NODE_REGISTRY["ROS2LeaderJointSubscriber"]({
+        result = _NODE_REGISTRY["ROS2JointSubscribe"]({
             "action": "start",
-            "run_id": "test_leader_subscription",
+            "run_id": "test_joint_subscription",
             "transport": "native",
             "state_topic": "/leader/joint_states",
             "config_topic": "/leader/joint_config",
         })
         assert result["running"] is True
         assert result["live"] is True
-        assert result["subscription"]["run_id"] == "test_leader_subscription"
+        assert result["subscription"]["run_id"] == "test_joint_subscription"
         assert result["pose"]["shoulder_pan"] == pytest.approx(math.degrees(0.25))
     finally:
         leader_subscription_runtime.stop_leader_subscription_services()
@@ -150,6 +156,43 @@ def test_split_follower_publisher_consumes_managed_subscription(monkeypatch):
     assert result["commanded"] is True
     assert follower.published
     assert item["leader_session"] is None
+
+
+def test_generic_joint_publisher_exposes_role_neutral_ports(monkeypatch):
+    captured = {}
+
+    def run(ctx):
+        captured.update(ctx)
+        return {
+            "running": True,
+            "live": True,
+            "armed": True,
+            "commanded": True,
+            "leader_pose": {"joint": 1.0},
+            "follower_pose": {"joint": 0.5},
+            "target": {"joint": 1.0},
+            "sample_stream": {"stream_id": "joint"},
+            "clamped": [],
+            "joint_count": 1,
+            "dashboard": "",
+            "summary": {},
+            "report": "published",
+        }
+
+    monkeypatch.setattr(leader_follower_runtime, "run_leader_follower", run)
+    result = _NODE_REGISTRY["ROS2JointPublish"]({
+        "subscription": {"run_id": "source"},
+        "robot": {"command_topic": "/joint_commands"},
+        "armed": True,
+    })
+
+    assert captured["leader_subscription"] == {"run_id": "source"}
+    assert captured["follower_robot"]["command_topic"] == "/joint_commands"
+    assert result["published"] is True
+    assert result["source_pose"] == {"joint": 1.0}
+    assert result["current_pose"] == {"joint": 0.5}
+    assert result["command"] == {"joint": 1.0}
+    assert result["message_stream"] == {"stream_id": "joint"}
 
 
 def test_native_follow_detection_joint_blocked_when_disarmed(monkeypatch):

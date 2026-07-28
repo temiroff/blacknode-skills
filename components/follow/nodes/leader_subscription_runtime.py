@@ -1,4 +1,4 @@
-"""Managed ROS 2 leader joint-state subscriptions for split follow graphs."""
+"""Managed ROS 2 joint-state subscriptions for split follow graphs."""
 from __future__ import annotations
 
 import math
@@ -67,7 +67,7 @@ def stop_leader_subscription_services() -> dict[str, Any]:
     return {
         "ok": True,
         "stopped": stopped,
-        "report": f"stopped {stopped} leader subscription(s)",
+        "report": f"stopped {stopped} joint subscription(s)",
     }
 
 
@@ -84,7 +84,7 @@ def run_leader_subscription(ctx: dict[str, Any]) -> dict[str, Any]:
             "sample_stream": {},
             "pose": {},
             "age": -1.0,
-            "report": f"leader subscription '{run_id}' {'stopped' if stopped else 'was not running'}.",
+            "report": f"joint subscription '{run_id}' {'stopped' if stopped else 'was not running'}.",
         }
 
     with _lock:
@@ -93,7 +93,7 @@ def run_leader_subscription(ctx: dict[str, Any]) -> dict[str, Any]:
         return {
             "running": False, "live": False, "subscription": {},
             "sample_stream": {}, "pose": {}, "age": -1.0,
-            "report": f"leader subscription '{run_id}' is not running.",
+            "report": f"joint subscription '{run_id}' is not running.",
         }
 
     robot = ctx.get("leader_robot") if isinstance(ctx.get("leader_robot"), dict) else {}

@@ -35,12 +35,13 @@ discovery is permitted. Windows local runs select rosbridge automatically and
 retain the host, port, and LAN-exposure controls as their compatibility path.
 
 The native **ROS 2 Joint Follower Deploy** canvas exposes the transport as two
-managed nodes. `ROS2LeaderJointSubscriber` owns the persistent
-`/leader/joint_states` subscription and freshness state.
-`ROS2FollowerJointPublisher` consumes that subscription and publishes
-calibrated, limited `/follower/joint_commands` only while explicitly armed.
-`ROS2TopicEcho` remains a bounded diagnostic reader and is not part of this
-deployment path.
+clear managed nodes. `ROS2JointSubscribe` owns the persistent
+`/leader/joint_states` subscription and freshness state. `ROS2JointPublish`
+consumes that subscription and publishes calibrated, limited
+`/follower/joint_commands` only while explicitly armed. The robot roles live in
+the template labels and topic configuration rather than the reusable node
+types. `ROS2LeaderJointSubscriber` and `ROS2FollowerJointPublisher` remain
+hidden compatibility aliases for saved workflows.
 
 `SO-ARM102 Follower Deploy` is a deployment-role template name. Blacknode
 currently ships the `so_arm101` mechanical profile as its default. Select the
