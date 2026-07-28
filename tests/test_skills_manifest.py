@@ -47,6 +47,8 @@ def test_split_leader_follower_templates_are_one_robot_deployments():
 
     assert leader["name"] == "SO-ARM101 Leader Deploy"
     assert follower["name"] == "SO-ARM102 Follower Deploy"
+    assert leader["metadata"]["hidden"] is True
+    assert follower["metadata"]["hidden"] is True
     assert sum(
         node["type"] == "Robot" for node in leader["node_meta"].values()
     ) == 1
@@ -92,7 +94,26 @@ def test_native_ros2_joint_pair_uses_one_shared_safe_topic_contract():
             encoding="utf-8"
         )
     )
+    combined = json.loads(
+        (template_dir / "so-arm101-leader-follower.json").read_text(
+            encoding="utf-8"
+        )
+    )
 
+    assert combined["metadata"]["hidden"] is True
+    assert leader["metadata"].get("hidden") is not True
+    assert follower["metadata"].get("hidden") is not True
+    visible_deployments = {
+        path.name
+        for path in template_dir.glob("*deploy.json")
+        if not json.loads(path.read_text(encoding="utf-8"))
+        .get("metadata", {})
+        .get("hidden", False)
+    }
+    assert visible_deployments == {
+        "ros2-joint-leader-deploy.json",
+        "ros2-joint-follower-deploy.json",
+    }
     assert leader["metadata"]["deployment_pair"] == {
         "id": "ros2_joint_leader_follower",
         "role": "leader",
