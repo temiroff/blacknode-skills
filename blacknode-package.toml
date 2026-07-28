@@ -34,6 +34,7 @@ nodes = ["components/follow/adapters/ros2/nodes"]
 templates = ["components/follow/adapters/ros2/templates"]
 node-types = [
   "RobotFollow", "ROS2FollowDetectionJoint", "ROS2LeaderFollower",
+  "ROS2LeaderJointSubscriber", "ROS2FollowerJointPublisher",
   "ROS2NativeFollowDetectionJoint"
 ]
 

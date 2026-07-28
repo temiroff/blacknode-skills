@@ -29,8 +29,7 @@
       "blacknode-drivers/feetech",
       "blacknode-controllers/joint-control",
       "blacknode-ros2/core",
-      "blacknode-ros2/diagnostics",
-      "blacknode-ros2/topics"
+      "blacknode-ros2/diagnostics"
     ],
     "required_adapters": [
       "blacknode-drivers/feetech@ros2",
@@ -296,58 +295,15 @@
         ]
       }
     },
-    "leader_state_subscriber": {
-      "id": "leader_state_subscriber",
-      "type": "ROS2TopicEcho",
-      "pos": [
-        960,
-        160
-      ],
-      "params": {
-        "label": "Subscribe: /leader/joint_states",
-        "topic": "/leader/joint_states",
-        "msg_type": "sensor_msgs/msg/JointState",
-        "count": 1,
-        "timeout": 10.0
-      },
-      "inputs": [
-        "trigger",
-        "topic",
-        "msg_type",
-        "count",
-        "timeout"
-      ],
-      "outputs": [
-        "messages",
-        "report"
-      ],
-      "input_types": {
-        "trigger": "Any",
-        "topic": "Text",
-        "msg_type": "Text",
-        "count": "Int",
-        "timeout": "Float"
-      },
-      "output_types": {
-        "messages": "List",
-        "report": "Text"
-      },
-      "input_defaults": {
-        "topic": "/chatter",
-        "msg_type": "",
-        "count": 1,
-        "timeout": 10.0
-      }
-    },
     "release_leader": {
       "id": "release_leader",
       "type": "ROS2ManualMove",
       "pos": [
-        1400,
+        980,
         160
       ],
       "params": {
-        "label": "Release leader + monitor pose",
+        "label": "ROS 2: Release leader torque",
         "run_id": "ros2_joint_leader_pose",
         "action": "release",
         "transport": "native",
@@ -450,7 +406,7 @@
       "id": "out",
       "type": "Output",
       "pos": [
-        1840,
+        1420,
         160
       ],
       "params": {
@@ -482,12 +438,6 @@
     },
     {
       "from": "leader_robot",
-      "from_port": "report",
-      "to": "leader_state_subscriber",
-      "to_port": "trigger"
-    },
-    {
-      "from": "leader_state_subscriber",
       "from_port": "report",
       "to": "release_leader",
       "to_port": "trigger"

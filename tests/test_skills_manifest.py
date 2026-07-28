@@ -109,28 +109,34 @@ def test_native_ros2_joint_pair_uses_one_shared_safe_topic_contract():
     assert leader["node_meta"]["leader_robot"]["params"]["label"] == (
         "Leader ROS 2 state publisher"
     )
-    assert leader["node_meta"]["leader_state_subscriber"]["type"] == "ROS2TopicEcho"
-    assert leader["node_meta"]["leader_state_subscriber"]["params"]["topic"] == (
-        "/leader/joint_states"
-    )
+    assert "leader_state_subscriber" not in leader["node_meta"]
     assert leader["node_meta"]["release_leader"]["params"]["action"] == "release"
+    assert leader["node_meta"]["release_leader"]["params"]["label"] == (
+        "ROS 2: Release leader torque"
+    )
+    assert leader["node_meta"]["release_leader"]["params"]["live_monitor"] is False
     assert follower["node_meta"]["follower_robot"]["params"]["profile_id"] == "auto"
     assert follower["node_meta"]["follower_robot"]["params"]["label"] == (
         "Follower ROS 2 driver"
     )
-    assert follower["node_meta"]["follower_state_subscriber"]["type"] == "ROS2TopicEcho"
-    assert follower["node_meta"]["follower_state_subscriber"]["params"]["topic"] == (
-        "/follower/joint_states"
+    assert follower["node_meta"]["leader_subscription"]["type"] == (
+        "ROS2LeaderJointSubscriber"
     )
-    assert follower["node_meta"]["leader_state_subscriber"]["type"] == "ROS2TopicEcho"
-    assert follower["node_meta"]["leader_state_subscriber"]["params"]["topic"] == (
+    assert follower["node_meta"]["leader_subscription"]["params"]["state_topic"] == (
         "/leader/joint_states"
     )
+    assert follower["node_meta"]["follow"]["type"] == "ROS2FollowerJointPublisher"
     assert follower["node_meta"]["follow"]["params"]["transport"] == "native"
     assert follower["node_meta"]["follow"]["params"]["label"] == (
-        "Subscribe leader → safe follower publish"
+        "ROS 2 publish: safe follower commands"
     )
-    assert follower["node_meta"]["follow"]["params"]["placement"] == "separate_devices"
+    assert any(
+        edge["from"] == "leader_subscription"
+        and edge["from_port"] == "subscription"
+        and edge["to"] == "follow"
+        and edge["to_port"] == "leader_subscription"
+        for edge in follower["edges"]
+    )
     assert follower["node_meta"]["follow"]["params"]["armed"] is False
     assert follower["node_meta"]["follow"]["params"]["require_calibration"] is True
     assert follower["node_meta"]["follow"]["params"]["require_leader_released"] is True
