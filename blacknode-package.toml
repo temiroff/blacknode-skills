@@ -1,6 +1,6 @@
 [package]
 name = "blacknode-skills"
-version = "0.2.5"
+version = "0.2.6"
 description = "Reusable task-level robot skills composed from stable Blacknode capabilities."
 requires-blacknode = ">=0.3.0"
 layer = "skills"

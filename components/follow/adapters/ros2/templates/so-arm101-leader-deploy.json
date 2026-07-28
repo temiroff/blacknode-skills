@@ -6,6 +6,7 @@
   "entrypoint": {"node_id": "out", "port": "value"},
   "metadata": {
     "template": true,
+    "hidden": true,
     "description": "Deploy one calibrated SO-ARM leader to its paired hardware device. Linux deployments use native ROS 2 and release torque for hand guidance. Windows local runs automatically use the compatible rosbridge transport.",
     "color": "#14b8a6",
     "required_capabilities": ["joint_group", "position_feedback", "servo_bus"],

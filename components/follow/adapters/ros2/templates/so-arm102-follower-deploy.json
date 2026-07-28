@@ -6,6 +6,7 @@
   "entrypoint": {"node_id": "out", "port": "value"},
   "metadata": {
     "template": true,
+    "hidden": true,
     "description": "Deploy one calibrated follower to its paired hardware device. Linux deployments use the native ROS 2 graph for leader pose and follower commands. Windows local runs automatically use rosbridge. The follower stays disarmed until Armed is enabled.",
     "color": "#f59e0b",
     "required_capabilities": ["joint_group", "position_feedback", "servo_bus"],

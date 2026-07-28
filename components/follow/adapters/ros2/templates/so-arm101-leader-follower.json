@@ -9,6 +9,7 @@
   },
   "metadata": {
     "template": true,
+    "hidden": true,
     "description": "Directly control robot index 1 from torque-released robot index 0. Each physical arm uses one Robot node; teleoperation starts in disarmed preview mode.",
     "color": "#14b8a6",
     "required_packages": [
