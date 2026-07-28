@@ -71,3 +71,45 @@ def test_split_leader_follower_templates_are_one_robot_deployments():
     assert "follower_robot_index" not in follower["node_meta"]
     assert follower["node_meta"]["follower_robot"]["params"]["selection"] == 0
     assert not any(edge["to_port"] == "selection" for edge in follower["edges"])
+
+
+def test_native_ros2_joint_pair_uses_one_shared_safe_topic_contract():
+    template_dir = (
+        Path(__file__).resolve().parents[1]
+        / "components" / "follow" / "adapters" / "ros2" / "templates"
+    )
+    leader = json.loads(
+        (template_dir / "ros2-joint-leader-deploy.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    follower = json.loads(
+        (template_dir / "ros2-joint-follower-deploy.json").read_text(
+            encoding="utf-8"
+        )
+    )
+
+    assert leader["metadata"]["deployment_pair"] == {
+        "id": "ros2_joint_leader_follower",
+        "role": "leader",
+        "transport": "native",
+        "state_topic": "/leader/joint_states",
+        "message_type": "sensor_msgs/msg/JointState",
+    }
+    assert follower["metadata"]["deployment_pair"] == {
+        "id": "ros2_joint_leader_follower",
+        "role": "follower",
+        "transport": "native",
+        "leader_state_topic": "/leader/joint_states",
+        "follower_command_topic": "/follower/joint_commands",
+        "message_type": "sensor_msgs/msg/JointState",
+    }
+    assert leader["node_meta"]["leader_robot"]["params"]["profile_id"] == "auto"
+    assert leader["node_meta"]["leader_robot"]["params"]["read_only"] is True
+    assert leader["node_meta"]["release_leader"]["params"]["action"] == "release"
+    assert follower["node_meta"]["follower_robot"]["params"]["profile_id"] == "auto"
+    assert follower["node_meta"]["follow"]["params"]["transport"] == "native"
+    assert follower["node_meta"]["follow"]["params"]["placement"] == "separate_devices"
+    assert follower["node_meta"]["follow"]["params"]["armed"] is False
+    assert follower["node_meta"]["follow"]["params"]["require_calibration"] is True
+    assert follower["node_meta"]["follow"]["params"]["require_leader_released"] is True
