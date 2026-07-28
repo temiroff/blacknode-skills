@@ -8,42 +8,23 @@ their executable nodes and dependency declarations are added.
 Planned components: `pick-place`, `follow`, `delivery`, `docking`, and
 `inspection`.
 
-## Split leader and follower deployment
+## ROS 2 publish and subscribe deployment
 
-The follow ROS 2 adapter ships visual-follow and leader/follower nodes, plus
-two one-robot deployment templates:
+The template gallery presents two small ROS 2 transport workflows:
 
-- **SO-ARM101 Leader Deploy** starts the selected leader robot, releases its
-  torque for hand guidance, and publishes its joint stream on ROS 2.
-- **SO-ARM102 Follower Deploy** starts the selected follower robot, reads the
-  leader stream, and keeps follower motion disarmed until its `Armed` value is
-  explicitly enabled. Enabling `Armed` seeds and enables holding torque on the
-  follower at its current pose before sending bounded joint targets. Disabling
-  `Armed`, stopping the controller, or shutting down the deployment explicitly
-  releases follower torque. The controller never enables leader torque.
+- **ROS 2 Joint Leader Publish** starts the selected robot in read-only mode
+  and publishes its live joint state on `/leader/joint_states`.
+- **ROS 2 Joint Follower Subscribe** subscribes to
+  `/leader/joint_states` and exposes the latest received pose as its output.
 
-Running follower deployments also listen on their declared
-`/blacknode/leader_follower/<run_id>/control` topic. The authenticated Runtime
-uses that fixed topic for the editor's explicit **Arm follower** and
-**Disarm follower** actions. A deployment always starts from the graph's
-disarmed default; restart never restores a previous live arm command.
+The publisher preserves the selected robot's torque state. The subscriber is
+an observation workflow. Robot command and hand-guided teleoperation behavior
+remain available through the hidden compatibility templates for saved
+workflows.
 
-Deploy the leader first and the follower second. Linux deployments select
-native `rclpy`; two robots on one computer share its ROS 2 graph directly.
-For separate Linux computers, use the same ROS domain and a network where DDS
-discovery is permitted. Windows local runs select rosbridge automatically and
-retain the host, port, and LAN-exposure controls as their compatibility path.
-
-The native **ROS 2 Joint Follower Deploy** canvas exposes the transport as two
-clear managed nodes. `ROS2JointSubscribe` owns the persistent
-`/leader/joint_states` subscription and freshness state. `ROS2JointPublish`
-consumes that subscription and publishes calibrated, limited
-`/follower/joint_commands` only while explicitly armed. The robot roles live in
-the template labels and topic configuration rather than the reusable node
-types. `ROS2LeaderJointSubscriber` and `ROS2FollowerJointPublisher` remain
-hidden compatibility aliases for saved workflows.
-
-`SO-ARM102 Follower Deploy` is a deployment-role template name. Blacknode
-currently ships the `so_arm101` mechanical profile as its default. Select the
-saved follower profile and its hardware-bound calibration in the deployment
-panel; the template does not invent SO-ARM102 joint geometry.
+Start the publisher first and the subscriber second. Linux deployments use
+native `rclpy`. Systems on separate computers use the same ROS domain and a
+network that permits DDS discovery. `ROS2JointSubscribe` owns the persistent
+subscription and freshness state. `ROS2LeaderJointSubscriber` and
+`ROS2FollowerJointPublisher` remain hidden compatibility aliases for saved
+workflows.
