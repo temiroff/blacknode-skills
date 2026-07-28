@@ -62,10 +62,90 @@ def ros2_leader_follower(ctx: dict) -> dict:
 
 
 @node(
-    name="ROS2LeaderJointSubscriber",
+    name="ROS2JointSubscribe",
     live=True,
     category=_CATEGORY,
-    description="Maintain a real ROS 2 JointState subscription for a leader and expose its fresh latest-value stream.",
+    description="Maintain a managed ROS 2 JointState subscription and expose its fresh latest-value stream.",
+    inputs={
+        "trigger": AnyPort,
+        "action": Enum(["start", "stop", "check"], default="start"),
+        "run_id": Text(default="joint_subscription"),
+        "robot": Dict,
+        "transport": Enum(["auto", "native", "rosbridge"], default="auto"),
+        "host": Text(default="127.0.0.1"),
+        "port": Int(default=9090),
+        "state_topic": Text(default="/joint_states"),
+        "config_topic": Text(default="/joint_config"),
+        "stale_after": Float(default=0.75),
+        "timeout": Float(default=10.0),
+    },
+    outputs={
+        "running": Bool, "live": Bool, "subscription": Dict,
+        "sample_stream": Dict, "pose": Dict, "age": Float, "report": Text,
+    },
+)
+def ros2_joint_subscribe(ctx: dict) -> dict:
+    return leader_subscription_runtime.run_leader_subscription({
+        **ctx,
+        "leader_robot": ctx.get("robot"),
+    })
+
+
+@node(
+    name="ROS2JointPublish",
+    live=True,
+    category=_CATEGORY,
+    description="Publish safety-gated ROS 2 joint commands from a managed joint subscription.",
+    inputs={
+        "trigger": AnyPort,
+        "action": Enum(["start", "stop", "check"], default="start"),
+        "run_id": Text(default="joint_publisher"),
+        "control_topic": Text(default=""),
+        "subscription": Dict,
+        "robot": Dict,
+        "transport": Enum(["auto", "native", "rosbridge"], default="auto"),
+        "host": Text(default="127.0.0.1"),
+        "port": Int(default=9090),
+        "joint_map": Dict, "scale": Dict, "offset_deg": Dict,
+        "tracking_mode": Enum(["bounded", "direct"], default="direct"),
+        "loop_hz": Float(default=60.0),
+        "max_step_deg": Float(default=0.0),
+        "deadband_deg": Float(default=0.0),
+        "stale_after": Float(default=0.75),
+        "require_calibration": Bool(default=True),
+        "require_leader_released": Bool(default=True),
+        "armed": Bool(default=False),
+        "timeout": Float(default=10.0),
+    },
+    outputs={
+        "running": Bool, "live": Bool, "armed": Bool, "published": Bool,
+        "source_pose": Dict, "current_pose": Dict, "command": Dict,
+        "message_stream": Dict, "clamped": List, "joint_count": Int,
+        "dashboard": Image, "summary": Dict, "report": Text,
+    },
+)
+def ros2_joint_publish(ctx: dict) -> dict:
+    result = leader_follower_runtime.run_leader_follower({
+        **ctx,
+        "leader_subscription": ctx.get("subscription"),
+        "follower_robot": ctx.get("robot"),
+    })
+    return {
+        **result,
+        "published": bool(result.get("commanded")),
+        "source_pose": dict(result.get("leader_pose") or {}),
+        "current_pose": dict(result.get("follower_pose") or {}),
+        "command": dict(result.get("target") or {}),
+        "message_stream": dict(result.get("sample_stream") or {}),
+    }
+
+
+@node(
+    name="ROS2LeaderJointSubscriber",
+    live=True,
+    hidden=True,
+    category=_CATEGORY,
+    description="Compatibility alias for ROS2JointSubscribe.",
     inputs={
         "trigger": AnyPort,
         "action": Enum(["start", "stop", "check"], default="start"),
@@ -91,8 +171,9 @@ def ros2_leader_joint_subscriber(ctx: dict) -> dict:
 @node(
     name="ROS2FollowerJointPublisher",
     live=True,
+    hidden=True,
     category=_CATEGORY,
-    description="Publish safety-gated follower joint commands from a managed leader subscription.",
+    description="Compatibility alias for ROS2JointPublish.",
     inputs={
         "trigger": AnyPort,
         "action": Enum(["start", "stop", "check"], default="start"),

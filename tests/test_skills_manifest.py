@@ -28,7 +28,9 @@ def test_follow_person_ros2_template_declares_every_adapter_it_uses():
         "blacknode-skills/follow@ros2",
         "blacknode-controllers/joint-control@ros2",
     ]
-    assert workflow["node_meta"]["follow"]["type"] == "ROS2LeaderFollower"
+    assert workflow["node_meta"]["subscribe"]["type"] == "ROS2JointSubscribe"
+    assert workflow["node_meta"]["publish"]["type"] == "ROS2JointPublish"
+    assert "follow" not in workflow["node_meta"]
 
 
 def test_split_leader_follower_templates_are_one_robot_deployments():
@@ -64,10 +66,12 @@ def test_split_leader_follower_templates_are_one_robot_deployments():
     assert "leader_robot_index" not in leader["node_meta"]
     assert leader["node_meta"]["leader_robot"]["params"]["selection"] == 0
     assert not any(edge["to_port"] == "selection" for edge in leader["edges"])
-    assert follower["node_meta"]["follow"]["params"]["leader_port"] == 9091
+    assert follower["node_meta"]["subscribe"]["params"]["port"] == 9091
     assert follower["node_meta"]["follower_bridge"]["params"]["transport"] == "auto"
-    assert follower["node_meta"]["follow"]["params"]["transport"] == "auto"
-    assert follower["node_meta"]["follow"]["params"]["armed"] is False
+    assert follower["node_meta"]["subscribe"]["params"]["transport"] == "auto"
+    assert follower["node_meta"]["publish"]["params"]["transport"] == "auto"
+    assert follower["node_meta"]["publish"]["params"]["armed"] is False
+    assert "follow" not in follower["node_meta"]
     assert "follower_robot_index" not in follower["node_meta"]
     assert follower["node_meta"]["follower_robot"]["params"]["selection"] == 0
     assert not any(edge["to_port"] == "selection" for edge in follower["edges"])
@@ -119,24 +123,25 @@ def test_native_ros2_joint_pair_uses_one_shared_safe_topic_contract():
     assert follower["node_meta"]["follower_robot"]["params"]["label"] == (
         "Follower ROS 2 driver"
     )
-    assert follower["node_meta"]["leader_subscription"]["type"] == (
-        "ROS2LeaderJointSubscriber"
+    assert follower["node_meta"]["subscribe"]["type"] == "ROS2JointSubscribe"
+    assert follower["node_meta"]["subscribe"]["params"]["label"] == (
+        "ROS 2 Subscribe"
     )
-    assert follower["node_meta"]["leader_subscription"]["params"]["state_topic"] == (
+    assert follower["node_meta"]["subscribe"]["params"]["state_topic"] == (
         "/leader/joint_states"
     )
-    assert follower["node_meta"]["follow"]["type"] == "ROS2FollowerJointPublisher"
-    assert follower["node_meta"]["follow"]["params"]["transport"] == "native"
-    assert follower["node_meta"]["follow"]["params"]["label"] == (
-        "ROS 2 publish: safe follower commands"
+    assert follower["node_meta"]["publish"]["type"] == "ROS2JointPublish"
+    assert follower["node_meta"]["publish"]["params"]["transport"] == "native"
+    assert follower["node_meta"]["publish"]["params"]["label"] == (
+        "ROS 2 Publish"
     )
     assert any(
-        edge["from"] == "leader_subscription"
+        edge["from"] == "subscribe"
         and edge["from_port"] == "subscription"
-        and edge["to"] == "follow"
-        and edge["to_port"] == "leader_subscription"
+        and edge["to"] == "publish"
+        and edge["to_port"] == "subscription"
         for edge in follower["edges"]
     )
-    assert follower["node_meta"]["follow"]["params"]["armed"] is False
-    assert follower["node_meta"]["follow"]["params"]["require_calibration"] is True
-    assert follower["node_meta"]["follow"]["params"]["require_leader_released"] is True
+    assert follower["node_meta"]["publish"]["params"]["armed"] is False
+    assert follower["node_meta"]["publish"]["params"]["require_calibration"] is True
+    assert follower["node_meta"]["publish"]["params"]["require_leader_released"] is True

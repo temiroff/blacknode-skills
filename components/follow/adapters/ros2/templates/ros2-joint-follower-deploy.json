@@ -297,15 +297,15 @@
         ]
       }
     },
-    "leader_subscription": {
-      "id": "leader_subscription",
-      "type": "ROS2LeaderJointSubscriber",
+    "subscribe": {
+      "id": "subscribe",
+      "type": "ROS2JointSubscribe",
       "pos": [
         900,
         200
       ],
       "params": {
-        "label": "ROS 2 subscribe: leader joints",
+        "label": "ROS 2 Subscribe",
         "action": "start",
         "run_id": "ros2_joint_leader_subscription",
         "transport": "native",
@@ -320,7 +320,7 @@
         "trigger",
         "action",
         "run_id",
-        "leader_robot",
+        "robot",
         "transport",
         "host",
         "port",
@@ -342,7 +342,7 @@
         "trigger": "Any",
         "action": "Text",
         "run_id": "Text",
-        "leader_robot": "Dict",
+        "robot": "Dict",
         "transport": "Text",
         "host": "Text",
         "port": "Int",
@@ -362,7 +362,7 @@
       },
       "input_defaults": {
         "action": "start",
-        "run_id": "leader_joint_subscription",
+        "run_id": "joint_subscription",
         "transport": "auto",
         "host": "127.0.0.1",
         "port": 9090,
@@ -397,15 +397,15 @@
       },
       "input_defaults": {}
     },
-    "follow": {
-      "id": "follow",
-      "type": "ROS2FollowerJointPublisher",
+    "publish": {
+      "id": "publish",
+      "type": "ROS2JointPublish",
       "pos": [
         1320,
         260
       ],
       "params": {
-        "label": "ROS 2 publish: safe follower commands",
+        "label": "ROS 2 Publish",
         "action": "start",
         "run_id": "ros2_joint_follower_publisher",
         "control_topic": "/blacknode/leader_follower/ros2_joint_follower_publisher/control",
@@ -430,8 +430,8 @@
         "action",
         "run_id",
         "control_topic",
-        "leader_subscription",
-        "follower_robot",
+        "subscription",
+        "robot",
         "transport",
         "host",
         "port",
@@ -452,11 +452,11 @@
         "running",
         "live",
         "armed",
-        "commanded",
-        "leader_pose",
-        "follower_pose",
-        "target",
-        "sample_stream",
+        "published",
+        "source_pose",
+        "current_pose",
+        "command",
+        "message_stream",
         "clamped",
         "joint_count",
         "dashboard",
@@ -468,8 +468,8 @@
         "action": "Text",
         "run_id": "Text",
         "control_topic": "Text",
-        "leader_subscription": "Dict",
-        "follower_robot": "Dict",
+        "subscription": "Dict",
+        "robot": "Dict",
         "transport": "Text",
         "host": "Text",
         "port": "Int",
@@ -490,11 +490,11 @@
         "running": "Bool",
         "live": "Bool",
         "armed": "Bool",
-        "commanded": "Bool",
-        "leader_pose": "Dict",
-        "follower_pose": "Dict",
-        "target": "Dict",
-        "sample_stream": "Dict",
+        "published": "Bool",
+        "source_pose": "Dict",
+        "current_pose": "Dict",
+        "command": "Dict",
+        "message_stream": "Dict",
         "clamped": "List",
         "joint_count": "Int",
         "dashboard": "Image",
@@ -503,7 +503,7 @@
       },
       "input_defaults": {
         "action": "start",
-        "run_id": "follower_joint_publisher",
+        "run_id": "joint_publisher",
         "control_topic": "",
         "transport": "auto",
         "host": "127.0.0.1",
@@ -569,35 +569,35 @@
     {
       "from": "follower_robot",
       "from_port": "robot",
-      "to": "follow",
-      "to_port": "follower_robot"
+      "to": "publish",
+      "to_port": "robot"
     },
     {
       "from": "follower_robot",
       "from_port": "report",
-      "to": "leader_subscription",
+      "to": "subscribe",
       "to_port": "trigger"
     },
     {
-      "from": "leader_subscription",
+      "from": "subscribe",
       "from_port": "report",
-      "to": "follow",
+      "to": "publish",
       "to_port": "trigger"
     },
     {
-      "from": "leader_subscription",
+      "from": "subscribe",
       "from_port": "subscription",
-      "to": "follow",
-      "to_port": "leader_subscription"
+      "to": "publish",
+      "to_port": "subscription"
     },
     {
       "from": "armed",
       "from_port": "value",
-      "to": "follow",
+      "to": "publish",
       "to_port": "armed"
     },
     {
-      "from": "follow",
+      "from": "publish",
       "from_port": "summary",
       "to": "out",
       "to_port": "value"
