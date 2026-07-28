@@ -40,15 +40,15 @@
     }
   },
   "node_meta": {
-    "publish": {
-      "id": "publish",
+    "leader_robot": {
+      "id": "leader_robot",
       "type": "Robot",
       "pos": [
         160,
         180
       ],
       "params": {
-        "label": "ROS 2 Publish: /leader/joint_states",
+        "label": "Leader Robot",
         "profile_id": "auto",
         "selection": 0,
         "action": "start",
@@ -213,11 +213,48 @@
         ]
       }
     },
+    "publish": {
+      "id": "publish",
+      "type": "ROS2JointStatePublish",
+      "pos": [
+        700,
+        180
+      ],
+      "params": {
+        "label": "ROS 2 Publish: /leader/joint_states",
+        "state_topic": "/leader/joint_states"
+      },
+      "inputs": [
+        "trigger",
+        "robot",
+        "state_topic"
+      ],
+      "outputs": [
+        "publishing",
+        "publisher",
+        "state_topic",
+        "report"
+      ],
+      "input_types": {
+        "trigger": "Any",
+        "robot": "Dict",
+        "state_topic": "Text"
+      },
+      "output_types": {
+        "publishing": "Bool",
+        "publisher": "Dict",
+        "state_topic": "Text",
+        "report": "Text"
+      },
+      "input_defaults": {
+        "state_topic": "/leader/joint_states"
+      }
+    },
     "out": {
       "id": "out",
       "type": "Output",
       "pos": [
-        700,
+        1160,
         180
       ],
       "params": {
@@ -235,6 +272,18 @@
     }
   },
   "edges": [
+    {
+      "from": "leader_robot",
+      "from_port": "robot",
+      "to": "publish",
+      "to_port": "robot"
+    },
+    {
+      "from": "leader_robot",
+      "from_port": "report",
+      "to": "publish",
+      "to_port": "trigger"
+    },
     {
       "from": "publish",
       "from_port": "report",

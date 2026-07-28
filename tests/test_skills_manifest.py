@@ -131,26 +131,31 @@ def test_visible_ros2_joint_pair_deploys_leader_and_follower():
     }
     assert leader["name"] == "ROS 2 Leader Deploy"
     assert follower["name"] == "ROS 2 Follower Deploy"
-    assert set(leader["node_meta"]) == {"publish", "out"}
+    assert set(leader["node_meta"]) == {"leader_robot", "publish", "out"}
     assert set(follower["node_meta"]) == {
         "follower_robot",
         "subscribe",
         "armed",
-        "apply_pose",
+        "replicate",
         "out",
     }
-    assert leader["node_meta"]["publish"]["type"] == "Robot"
-    assert leader["node_meta"]["publish"]["params"]["profile_id"] == "auto"
-    assert leader["node_meta"]["publish"]["params"]["read_only"] is True
+    assert leader["node_meta"]["leader_robot"]["type"] == "Robot"
+    assert leader["node_meta"]["leader_robot"]["params"]["profile_id"] == "auto"
+    assert leader["node_meta"]["leader_robot"]["params"]["read_only"] is True
+    assert leader["node_meta"]["leader_robot"]["params"]["label"] == "Leader Robot"
+    assert leader["node_meta"]["publish"]["type"] == "ROS2JointStatePublish"
     assert leader["node_meta"]["publish"]["params"]["label"] == (
         "ROS 2 Publish: /leader/joint_states"
     )
     assert leader["node_meta"]["publish"]["params"]["state_topic"] == (
         "/leader/joint_states"
     )
-    assert all(
-        node["type"] not in {"ROS2ManualMove", "ROS2JointPublish"}
-        for node in leader["node_meta"].values()
+    assert any(
+        edge["from"] == "leader_robot"
+        and edge["from_port"] == "robot"
+        and edge["to"] == "publish"
+        and edge["to_port"] == "robot"
+        for edge in leader["edges"]
     )
     assert follower["node_meta"]["follower_robot"]["type"] == "Robot"
     assert follower["node_meta"]["follower_robot"]["params"]["read_only"] is False
@@ -161,14 +166,14 @@ def test_visible_ros2_joint_pair_deploys_leader_and_follower():
     assert follower["node_meta"]["subscribe"]["params"]["state_topic"] == (
         "/leader/joint_states"
     )
-    assert follower["node_meta"]["apply_pose"]["type"] == "ROS2JointPublish"
-    assert follower["node_meta"]["apply_pose"]["params"]["label"] == (
-        "Apply subscribed pose to follower"
+    assert follower["node_meta"]["replicate"]["type"] == "ROS2JointReplicate"
+    assert follower["node_meta"]["replicate"]["params"]["label"] == (
+        "Replicate subscribed movement"
     )
-    assert follower["node_meta"]["apply_pose"]["params"]["armed"] is False
-    assert follower["node_meta"]["apply_pose"]["params"]["require_calibration"] is True
+    assert follower["node_meta"]["replicate"]["params"]["armed"] is False
+    assert follower["node_meta"]["replicate"]["params"]["require_calibration"] is True
     assert (
-        follower["node_meta"]["apply_pose"]["params"]["require_leader_released"]
+        follower["node_meta"]["replicate"]["params"]["require_leader_released"]
         is False
     )
     assert follower["node_meta"]["armed"]["params"] == {
@@ -178,14 +183,14 @@ def test_visible_ros2_joint_pair_deploys_leader_and_follower():
     assert any(
         edge["from"] == "subscribe"
         and edge["from_port"] == "subscription"
-        and edge["to"] == "apply_pose"
+        and edge["to"] == "replicate"
         and edge["to_port"] == "subscription"
         for edge in follower["edges"]
     )
     assert any(
         edge["from"] == "follower_robot"
         and edge["from_port"] == "robot"
-        and edge["to"] == "apply_pose"
+        and edge["to"] == "replicate"
         and edge["to_port"] == "robot"
         for edge in follower["edges"]
     )
