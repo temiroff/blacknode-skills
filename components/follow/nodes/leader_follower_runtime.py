@@ -19,6 +19,7 @@ from typing import Any
 from blacknode.pkg.blacknode_ros2 import ros2_native_runtime as nr
 from blacknode.pkg.blacknode_ros2 import rosbridge_runtime as rb
 from blacknode.pkg.blacknode_ros2 import sample_stream
+from blacknode.pkg.blacknode_skills.follow import leader_subscription_runtime
 
 _leader_follower_lock = threading.Lock()
 _leader_follower_runs: dict[str, dict[str, Any]] = {}
@@ -316,7 +317,16 @@ def stop_leader_follower_services() -> dict[str, Any]:
     with _leader_follower_lock:
         run_ids = list(_leader_follower_runs)
     stopped = sum(1 for run_id in run_ids if _stop_leader_follower(run_id))
-    return {"ok": True, "stopped": stopped, "report": f"stopped {stopped} leader-follower controller(s)"}
+    subscriptions = leader_subscription_runtime.stop_leader_subscription_services()
+    total = stopped + int(subscriptions.get("stopped") or 0)
+    return {
+        "ok": True,
+        "stopped": total,
+        "report": (
+            f"stopped {stopped} follower publisher(s) and "
+            f"{subscriptions.get('stopped', 0)} leader subscription(s)"
+        ),
+    }
 
 
 def update_leader_follower_config(run_id: str, values: dict[str, Any]) -> dict[str, Any]:
@@ -363,13 +373,34 @@ def monitor_entries() -> list[dict[str, Any]]:
 
 def _leader_follower_step(item: dict[str, Any], ctx: dict[str, Any]) -> dict[str, Any]:
     armed = bool(ctx.get("armed", False))
+    leader_subscription = (
+        ctx.get("leader_subscription")
+        if isinstance(ctx.get("leader_subscription"), dict)
+        else {}
+    )
+    split_transport = bool(leader_subscription)
+    subscription_sample = (
+        leader_subscription_runtime.subscription_snapshot(leader_subscription)
+        if split_transport
+        else {}
+    )
     leader = ctx.get("leader_robot") if isinstance(ctx.get("leader_robot"), dict) else {}
     follower = ctx.get("follower_robot") if isinstance(ctx.get("follower_robot"), dict) else {}
     leader_driver = leader.get("driver") if isinstance(leader.get("driver"), dict) else {}
     follower_driver = follower.get("driver") if isinstance(follower.get("driver"), dict) else {}
-    leader_id = str(leader_driver.get("hardware_id") or "")
+    leader_id = str(
+        subscription_sample.get("hardware_id")
+        or leader_driver.get("hardware_id")
+        or ""
+    )
     follower_id = str(follower_driver.get("hardware_id") or "")
-    remote_leader = not bool(leader)
+    remote_leader = split_transport or not bool(leader)
+    if split_transport and not subscription_sample:
+        return _leader_follower_result(
+            running=True,
+            armed=armed,
+            report="WAITING: leader ROS 2 subscription is not running; commands suppressed.",
+        )
     if not follower_id:
         return _leader_follower_result(
             running=True,
@@ -410,9 +441,19 @@ def _leader_follower_step(item: dict[str, Any], ctx: dict[str, Any]) -> dict[str
             ),
         )
     leader_topics = (
-        str(leader.get("state_topic") or "/leader/joint_states"),
+        str(
+            subscription_sample.get("state_topic")
+            or leader_subscription.get("state_topic")
+            or leader.get("state_topic")
+            or "/leader/joint_states"
+        ),
         str(leader.get("command_topic") or "/leader/joint_commands"),
-        str(leader.get("config_topic") or "/leader/joint_config"),
+        str(
+            subscription_sample.get("config_topic")
+            or leader_subscription.get("config_topic")
+            or leader.get("config_topic")
+            or "/leader/joint_config"
+        ),
     )
     follower_topics = (
         str(follower.get("state_topic") or "/follower/joint_states"),
@@ -440,7 +481,10 @@ def _leader_follower_step(item: dict[str, Any], ctx: dict[str, Any]) -> dict[str
         else follower_topics
     )
     session_runtime = nr if transport == "native" else rb
-    for role, signature in (("leader", leader_signature), ("follower", follower_signature)):
+    role_signatures = [("follower", follower_signature)]
+    if not split_transport:
+        role_signatures.insert(0, ("leader", leader_signature))
+    for role, signature in role_signatures:
         if (
             item.get(f"{role}_signature") != signature
             or item.get(f"{role}_transport") != transport
@@ -467,11 +511,21 @@ def _leader_follower_step(item: dict[str, Any], ctx: dict[str, Any]) -> dict[str
                 )
             item[f"{role}_signature"] = signature
             item[f"{role}_transport"] = transport
-    leader_session = item["leader_session"]
     follower_session = item["follower_session"]
-    leader_pose_rad, leader_config, leader_age = leader_session.snapshot()
+    leader_session = item.get("leader_session")
+    if split_transport:
+        leader_pose_rad = dict(subscription_sample.get("pose") or {})
+        leader_config = dict(subscription_sample.get("config") or {})
+        leader_age_value = subscription_sample.get("age")
+        leader_age = (
+            float(leader_age_value)
+            if leader_age_value is not None
+            else float("inf")
+        )
+    else:
+        leader_pose_rad, leader_config, leader_age = leader_session.snapshot()
     follower_pose_rad, follower_config, follower_age = follower_session.snapshot()
-    if not leader_pose_rad:
+    if not split_transport and not leader_pose_rad:
         leader_session.wait_for_pose(1.0)
         leader_pose_rad, leader_config, leader_age = leader_session.snapshot()
     if not follower_pose_rad:
@@ -479,15 +533,17 @@ def _leader_follower_step(item: dict[str, Any], ctx: dict[str, Any]) -> dict[str
         follower_pose_rad, follower_config, follower_age = follower_session.snapshot()
     stale_after = max(0.25, float(ctx.get("stale_after") or 0.75))
     stream_issues: list[str] = []
-    for role, session, pose, age in (
+    streams = [
         ("leader", leader_session, leader_pose_rad, leader_age),
         ("follower", follower_session, follower_pose_rad, follower_age),
-    ):
+    ]
+    for role, session, pose, age in streams:
         if pose and age <= stale_after:
             continue
         issue = "missing" if not pose else f"stale ({age:.2f}s > {stale_after:.2f}s)"
         stream_issues.append(f"{role} {issue}")
-        _release_role_session(item, role, discard=True)
+        if role == "follower" or not split_transport:
+            _release_role_session(item, role, discard=True)
         item[f"{role}_session_resets"] = int(item.get(f"{role}_session_resets") or 0) + 1
     if stream_issues:
         return _leader_follower_result(
@@ -498,7 +554,7 @@ def _leader_follower_step(item: dict[str, Any], ctx: dict[str, Any]) -> dict[str
                 "commands suppressed."
             ),
         )
-    if not leader_config:
+    if not split_transport and not leader_config:
         leader_config = leader_session.wait_for_config(0.5)
     if not follower_config:
         follower_config = follower_session.wait_for_config(0.5)
@@ -622,7 +678,11 @@ def _leader_follower_step(item: dict[str, Any], ctx: dict[str, Any]) -> dict[str
             )
         ),
         "follower_hardware_id": follower_id,
-        "leader_calibration_path": str(leader_driver.get("calibration_path") or ""),
+        "leader_calibration_path": str(
+            subscription_sample.get("calibration_path")
+            or leader_driver.get("calibration_path")
+            or ""
+        ),
         "follower_calibration_path": str(follower_driver.get("calibration_path") or ""),
     }
     report = (
@@ -661,7 +721,8 @@ def _leader_follower_worker(run_id: str, item: dict[str, Any]) -> None:
             _request_follower_torque(item, False, force=True)
         except Exception:
             pass
-        _release_role_session(item, "leader")
+        if not isinstance(item.get("ctx", {}).get("leader_subscription"), dict):
+            _release_role_session(item, "leader")
         _release_role_session(item, "follower")
         _release_control_session(item)
 

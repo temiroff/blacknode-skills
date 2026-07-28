@@ -28,7 +28,11 @@ _import_nodes_module("blacknode.pkg.blacknode_skills.follow", _NODES)
 _import_nodes_module("blacknode.pkg.blacknode_skills.follow.adapters.ros2", _ADAPTER_NODES)
 _tag_new_package_nodes(_before, "blacknode-skills", _ADAPTER_NODES, "follow", "ros2")
 
-from blacknode.pkg.blacknode_skills.follow import follow_runtime, leader_follower_runtime
+from blacknode.pkg.blacknode_skills.follow import (
+    follow_runtime,
+    leader_follower_runtime,
+    leader_subscription_runtime,
+)
 
 
 def test_follow_person_ros2_nodes_registered_with_category():
@@ -37,11 +41,115 @@ def test_follow_person_ros2_nodes_registered_with_category():
         "ROS2FollowDetectionJoint",
         "RobotFollow",
         "ROS2LeaderFollower",
+        "ROS2LeaderJointSubscriber",
+        "ROS2FollowerJointPublisher",
     ]:
         assert name in _NODE_REGISTRY, name
         assert _NODE_REGISTRY[name]._bn_category == "Skills"
         assert _NODE_REGISTRY[name]._bn_package == "blacknode-skills"
     assert _NODE_REGISTRY["ROS2NativeFollowDetectionJoint"]._bn_hidden is True
+
+
+def test_managed_leader_subscription_exposes_a_fresh_stream(monkeypatch):
+    class FakeSession:
+        def snapshot(self):
+            return (
+                {"shoulder_pan": 0.25},
+                {"torque_enabled": False},
+                0.01,
+            )
+
+    released = []
+    monkeypatch.setattr(nr, "available", lambda: (True, ""))
+    monkeypatch.setattr(nr, "acquire_joint_stream", lambda *args, **kwargs: FakeSession())
+    monkeypatch.setattr(
+        nr,
+        "release_joint_stream",
+        lambda session, **kwargs: released.append(session),
+    )
+    leader_subscription_runtime.stop_leader_subscription_services()
+    try:
+        result = _NODE_REGISTRY["ROS2LeaderJointSubscriber"]({
+            "action": "start",
+            "run_id": "test_leader_subscription",
+            "transport": "native",
+            "state_topic": "/leader/joint_states",
+            "config_topic": "/leader/joint_config",
+        })
+        assert result["running"] is True
+        assert result["live"] is True
+        assert result["subscription"]["run_id"] == "test_leader_subscription"
+        assert result["pose"]["shoulder_pan"] == pytest.approx(math.degrees(0.25))
+    finally:
+        leader_subscription_runtime.stop_leader_subscription_services()
+    assert released
+
+
+def test_split_follower_publisher_consumes_managed_subscription(monkeypatch):
+    class FollowerSession:
+        def __init__(self):
+            self.published = []
+
+        def snapshot(self):
+            return (
+                {"shoulder_pan": 0.0},
+                {
+                    "torque_enabled": True,
+                    "commands_allowed": True,
+                    "joints": {"shoulder_pan": {"lower": -1.0, "upper": 1.0}},
+                },
+                0.01,
+            )
+
+        def wait_for_pose(self, timeout):
+            return {"shoulder_pan": 0.0}
+
+        def wait_for_config(self, timeout):
+            return {}
+
+        def publish(self, pose):
+            self.published.append(dict(pose))
+
+    follower = FollowerSession()
+    monkeypatch.setattr(leader_follower_runtime, "_resolve_transport", lambda ctx: "native")
+    monkeypatch.setattr(
+        leader_subscription_runtime,
+        "subscription_snapshot",
+        lambda subscription: {
+            "state_topic": "/leader/joint_states",
+            "config_topic": "/leader/joint_config",
+            "pose": {"shoulder_pan": 0.25},
+            "config": {"torque_enabled": False},
+            "age": 0.01,
+            "hardware_id": "LEADER",
+            "calibration_path": "leader.json",
+        },
+    )
+    monkeypatch.setattr(nr, "acquire_joint_stream", lambda *args, **kwargs: follower)
+    monkeypatch.setattr(nr, "release_joint_stream", lambda *args, **kwargs: None)
+    item = {
+        "leader_session": None, "follower_session": None,
+        "leader_signature": None, "follower_signature": None,
+    }
+    result = leader_follower_runtime._leader_follower_step(item, {
+        "armed": True,
+        "leader_subscription": {"run_id": "leader"},
+        "follower_robot": {
+            "state_topic": "/follower/joint_states",
+            "command_topic": "/follower/joint_commands",
+            "config_topic": "/follower/joint_config",
+            "driver": {
+                "hardware_id": "FOLLOWER",
+                "calibration_path": "follower.json",
+            },
+        },
+        "require_calibration": True,
+        "require_leader_released": True,
+        "tracking_mode": "direct",
+    })
+    assert result["commanded"] is True
+    assert follower.published
+    assert item["leader_session"] is None
 
 
 def test_native_follow_detection_joint_blocked_when_disarmed(monkeypatch):

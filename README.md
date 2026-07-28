@@ -34,6 +34,14 @@ For separate Linux computers, use the same ROS domain and a network where DDS
 discovery is permitted. Windows local runs select rosbridge automatically and
 retain the host, port, and LAN-exposure controls as their compatibility path.
 
+The native **ROS 2 Joint Follower Deploy** canvas exposes the transport as two
+managed nodes. `ROS2LeaderJointSubscriber` owns the persistent
+`/leader/joint_states` subscription and freshness state.
+`ROS2FollowerJointPublisher` consumes that subscription and publishes
+calibrated, limited `/follower/joint_commands` only while explicitly armed.
+`ROS2TopicEcho` remains a bounded diagnostic reader and is not part of this
+deployment path.
+
 `SO-ARM102 Follower Deploy` is a deployment-role template name. Blacknode
 currently ships the `so_arm101` mechanical profile as its default. Select the
 saved follower profile and its hardware-bound calibration in the deployment
