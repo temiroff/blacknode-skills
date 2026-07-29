@@ -121,6 +121,7 @@ def ros2_joint_subscribe_compat(ctx: dict) -> dict:
 
 @node(
     name="ROS2PublishJointState",
+    live=True,
     category=_CATEGORY,
     description="Expose the ROS 2 JointState publisher owned by a running Robot driver.",
     inputs={
@@ -172,6 +173,7 @@ def ros2_joint_state_publish(ctx: dict) -> dict:
 
 @node(
     name="ROS2JointStatePublish",
+    live=True,
     hidden=True,
     category=_CATEGORY,
     description="Compatibility alias for ROS2PublishJointState.",

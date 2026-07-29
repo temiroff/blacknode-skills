@@ -28,7 +28,8 @@ when the source becomes stale.
 Start the publisher first and the subscriber second. Linux deployments use
 native `rclpy`. Systems on separate computers use the same ROS domain and a
 network that permits DDS discovery. `ROS2PublishJointState` exposes the
-publisher owned by the leader's running Robot driver.
+publisher owned by the leader's running Robot driver and keeps that deployment
+alive while the driver publishes.
 `ROS2SubscribeJointState` owns the persistent subscription and freshness state.
 `ROS2JointController` owns the safety-gated follower command stream, matching
 the publisher → subscriber → controller vocabulary used by simulation action

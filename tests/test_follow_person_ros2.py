@@ -58,7 +58,11 @@ def test_follow_person_ros2_nodes_registered_with_category():
     assert _NODE_REGISTRY["ROS2PublishJointState"]._bn_hidden is False
     assert _NODE_REGISTRY["ROS2SubscribeJointState"]._bn_hidden is False
     assert _NODE_REGISTRY["ROS2JointController"]._bn_hidden is False
+    assert _NODE_REGISTRY["ROS2PublishJointState"]._bn_live_capable is True
+    assert _NODE_REGISTRY["ROS2SubscribeJointState"]._bn_live_capable is True
+    assert _NODE_REGISTRY["ROS2JointController"]._bn_live_capable is True
     assert _NODE_REGISTRY["ROS2JointStatePublish"]._bn_hidden is True
+    assert _NODE_REGISTRY["ROS2JointStatePublish"]._bn_live_capable is True
     assert _NODE_REGISTRY["ROS2JointSubscribe"]._bn_hidden is True
     assert _NODE_REGISTRY["ROS2JointReplicate"]._bn_hidden is True
     assert _NODE_REGISTRY["ROS2JointPublish"]._bn_hidden is True
