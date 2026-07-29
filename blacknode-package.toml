@@ -15,7 +15,6 @@ default = false
 capabilities = ["skill.pick-place"]
 
 [components.follow]
-aliases = ["follow-person"]
 description = "Capability-driven visual and robot following skills."
 default = false
 capabilities = ["skill.follow"]
@@ -35,9 +34,6 @@ templates = ["components/follow/adapters/ros2/templates"]
 node-types = [
   "RobotFollow", "ROS2FollowDetectionJoint", "ROS2LeaderFollower",
   "ROS2PublishJointState", "ROS2SubscribeJointState", "ROS2JointController",
-  "ROS2JointStatePublish", "ROS2JointSubscribe", "ROS2JointReplicate",
-  "ROS2JointPublish",
-  "ROS2LeaderJointSubscriber", "ROS2FollowerJointPublisher",
   "ROS2NativeFollowDetectionJoint"
 ]
 

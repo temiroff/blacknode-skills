@@ -1,12 +1,15 @@
 # blacknode-skills
 
-This repository is the task-level skills layer. Each component composes stable
-robot, perception, controller, and agent capabilities. Skills must not import
-vendor SDKs or bind directly to device paths. Components begin disabled until
-their executable nodes and dependency declarations are added.
+This repository is the task-level behavior layer. Its public domains are
+`follow`, `pick-place`, `delivery`, `docking`, and `inspection`.
 
-Planned components: `pick-place`, `follow`, `delivery`, `docking`, and
-`inspection`.
+A skill coordinates stable capabilities supplied by robot, perception,
+controller, and agent packages. For example, pick-place composes detection,
+arm planning, arm execution, and gripper actions. Skills do not bind to vendor
+SDKs, device paths, CAN frames, serial ports, or hardware-specific drivers.
+
+The `follow` implementation and its ROS 2 adapter are available today. Other
+domains become active when their executable nodes and dependencies are ready.
 
 ## ROS 2 leader and follower deployment
 
@@ -33,7 +36,4 @@ alive while the driver publishes.
 `ROS2SubscribeJointState` owns the persistent subscription and freshness state.
 `ROS2JointController` owns the safety-gated follower command stream, matching
 the publisher → subscriber → controller vocabulary used by simulation action
-graphs. The former `ROS2JointStatePublish`, `ROS2JointSubscribe`,
-`ROS2JointReplicate`, `ROS2JointPublish`, `ROS2LeaderJointSubscriber`, and
-`ROS2FollowerJointPublisher` names remain hidden compatibility aliases for
-saved workflows.
+graphs. New workflows use these canonical node names directly.
