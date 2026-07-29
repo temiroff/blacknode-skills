@@ -44,12 +44,6 @@ def test_follow_person_ros2_nodes_registered_with_category():
         "ROS2PublishJointState",
         "ROS2SubscribeJointState",
         "ROS2JointController",
-        "ROS2JointStatePublish",
-        "ROS2JointSubscribe",
-        "ROS2JointReplicate",
-        "ROS2JointPublish",
-        "ROS2LeaderJointSubscriber",
-        "ROS2FollowerJointPublisher",
     ]:
         assert name in _NODE_REGISTRY, name
         assert _NODE_REGISTRY[name]._bn_category == "Skills"
@@ -61,13 +55,15 @@ def test_follow_person_ros2_nodes_registered_with_category():
     assert _NODE_REGISTRY["ROS2PublishJointState"]._bn_live_capable is True
     assert _NODE_REGISTRY["ROS2SubscribeJointState"]._bn_live_capable is True
     assert _NODE_REGISTRY["ROS2JointController"]._bn_live_capable is True
-    assert _NODE_REGISTRY["ROS2JointStatePublish"]._bn_hidden is True
-    assert _NODE_REGISTRY["ROS2JointStatePublish"]._bn_live_capable is True
-    assert _NODE_REGISTRY["ROS2JointSubscribe"]._bn_hidden is True
-    assert _NODE_REGISTRY["ROS2JointReplicate"]._bn_hidden is True
-    assert _NODE_REGISTRY["ROS2JointPublish"]._bn_hidden is True
-    assert _NODE_REGISTRY["ROS2LeaderJointSubscriber"]._bn_hidden is True
-    assert _NODE_REGISTRY["ROS2FollowerJointPublisher"]._bn_hidden is True
+    for legacy_name in (
+        "ROS2JointStatePublish",
+        "ROS2JointSubscribe",
+        "ROS2JointReplicate",
+        "ROS2JointPublish",
+        "ROS2LeaderJointSubscriber",
+        "ROS2FollowerJointPublisher",
+    ):
+        assert legacy_name not in _NODE_REGISTRY
 
 
 def test_managed_leader_subscription_exposes_a_fresh_stream(monkeypatch):
@@ -241,20 +237,6 @@ def test_generic_joint_replicator_exposes_role_neutral_ports(monkeypatch):
     assert result["current_pose"] == {"joint": 0.5}
     assert result["command"] == {"joint": 1.0}
     assert result["message_stream"] == {"stream_id": "joint"}
-
-    compatibility = _NODE_REGISTRY["ROS2JointPublish"]({
-        "subscription": {"run_id": "source"},
-        "robot": {"command_topic": "/joint_commands"},
-        "armed": True,
-    })
-    assert compatibility["published"] is True
-    replicate_compatibility = _NODE_REGISTRY["ROS2JointReplicate"]({
-        "subscription": {"run_id": "source"},
-        "robot": {"command_topic": "/joint_commands"},
-        "armed": True,
-    })
-    assert replicate_compatibility["published"] is True
-
 
 def test_native_follow_detection_joint_blocked_when_disarmed(monkeypatch):
     def fail_if_called(*args, **kwargs):
@@ -1091,18 +1073,18 @@ def test_leader_follower_remote_control_is_explicit_and_scoped():
 
 
 def test_joint_control_stop_delegates_to_follow_person_runtimes(monkeypatch):
-    """The joint-control adapter's stop_runtime_services() reaches this adapter's run counts."""
+    """The arm adapter's stop_runtime_services() reaches this adapter's run counts."""
     from blacknode.packages import _import_nodes_module
     from blacknode.pkg.blacknode_ros2 import rosbridge_runtime as ros2_rb
 
     adapter_nodes = (
         Path(__file__).resolve().parents[2]
-        / "blacknode-controllers" / "components" / "joint-control" / "adapters" / "ros2" / "nodes"
+        / "blacknode-motion" / "components" / "arm" / "adapters" / "ros2" / "nodes"
     )
     _import_nodes_module(
-        "blacknode.pkg.blacknode_controllers.joint_control.adapters.ros2", adapter_nodes
+        "blacknode.pkg.blacknode_motion.arm.adapters.ros2", adapter_nodes
     )
-    from blacknode.pkg.blacknode_controllers.joint_control.adapters.ros2 import joint_motion as live
+    from blacknode.pkg.blacknode_motion.arm.adapters.ros2 import joint_motion as live
 
     monkeypatch.setattr(follow_runtime, "stop_continuous_follow_services", lambda: {
         "ok": True, "stopped": 2, "report": "stopped 2",

@@ -55,8 +55,8 @@
         ]
       },
       {
-        "name": "blacknode-controllers",
-        "git_url": "https://github.com/temiroff/blacknode-controllers.git",
+        "name": "blacknode-motion",
+        "git_url": "https://github.com/temiroff/blacknode-motion.git",
         "node_types": [
           "ROS2JointState",
           "ROS2MotionDashboard"

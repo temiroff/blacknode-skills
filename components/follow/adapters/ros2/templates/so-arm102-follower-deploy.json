@@ -10,9 +10,9 @@
     "description": "Deploy one calibrated follower to its paired hardware device. Linux deployments use the native ROS 2 graph for leader pose and follower commands. Windows local runs automatically use rosbridge. The follower stays disarmed until Armed is enabled.",
     "color": "#f59e0b",
     "required_capabilities": ["joint_group", "position_feedback", "servo_bus"],
-    "required_packages": ["blacknode-skills", "blacknode-robot", "blacknode-drivers", "blacknode-controllers", "blacknode-ros2"],
-    "required_components": ["blacknode-skills/follow", "blacknode-robot/core", "blacknode-drivers/feetech", "blacknode-controllers/joint-control", "blacknode-ros2/core", "blacknode-ros2/diagnostics"],
-    "required_adapters": ["blacknode-skills/follow@ros2", "blacknode-drivers/feetech@ros2", "blacknode-controllers/joint-control@ros2"],
+    "required_packages": ["blacknode-skills", "blacknode-robot", "blacknode-drivers", "blacknode-motion", "blacknode-ros2"],
+    "required_components": ["blacknode-skills/follow", "blacknode-robot/core", "blacknode-drivers/feetech", "blacknode-motion/arm", "blacknode-ros2/core", "blacknode-ros2/diagnostics"],
+    "required_adapters": ["blacknode-skills/follow@ros2", "blacknode-drivers/feetech@ros2", "blacknode-motion/arm@ros2"],
     "deployment_pair": {"id": "so_arm_leader_follower", "role": "follower", "transport": "auto", "leader_port": 9091, "follower_port": 9090}
   },
   "node_meta": {
@@ -42,7 +42,7 @@
     },
     "subscribe": {
       "id": "subscribe",
-      "type": "ROS2JointSubscribe",
+      "type": "ROS2SubscribeJointState",
       "pos": [900, 180],
       "params": {"label": "ROS 2 Subscribe", "action": "start", "run_id": "so_arm_joint_subscription", "transport": "auto", "host": "127.0.0.1", "port": 9091, "state_topic": "/leader/joint_states", "config_topic": "/leader/joint_config", "stale_after": 0.75, "timeout": 10.0},
       "inputs": ["trigger", "action", "run_id", "robot", "transport", "host", "port", "state_topic", "config_topic", "stale_after", "timeout"],
@@ -65,7 +65,7 @@
     },
     "publish": {
       "id": "publish",
-      "type": "ROS2JointPublish",
+      "type": "ROS2JointController",
       "pos": [1320, 260],
       "params": {
         "label": "ROS 2 Publish",
