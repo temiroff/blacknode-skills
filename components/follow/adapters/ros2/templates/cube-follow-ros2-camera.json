@@ -9,10 +9,13 @@
   },
   "metadata": {
     "template": true,
-    "description": "Start the bundled ROS 2 USB camera publisher, stream /camera/image_raw, colour-track a cube with TrackingObject plus live Qwen reasoning, and follow it through the automatically selected robot transport. Armed on start — the arm moves as soon as you cook the graph.",
+    "description": "Start the bundled ROS 2 USB camera publisher, stream /camera/image_raw, colour-track a cube with TrackingObject plus live Qwen reasoning, and follow it through the automatically selected robot transport. Motion starts disarmed and requires explicit operator arming.",
     "color": "#2563eb",
     "required_adapters": [
       "blacknode-skills/follow@ros2"
+    ],
+    "required_components": [
+      "blacknode-ros2/processes"
     ],
     "required_packages": [
       {

@@ -1,6 +1,6 @@
 [package]
 name = "blacknode-skills"
-version = "0.3.1"
+version = "0.4.0"
 description = "Reusable task-level robot skills composed from stable Blacknode capabilities."
 requires-blacknode = ">=0.3.0"
 layer = "skills"
@@ -17,11 +17,14 @@ capabilities = ["skill.pick-place"]
 [components.follow]
 description = "Capability-driven visual and robot following skills."
 default = false
+aliases = ["follow-person"]
+deprecated-aliases = { follow-person = { replacement = "follow", removal-version = "1.0.0" } }
 capabilities = ["skill.follow"]
 nodes = ["components/follow/nodes"]
 
 [components.follow.dependencies]
 requires = [
+  { package = "blacknode-motion", component = "arm", version = ">=0.6.0,<1.0.0" },
   { package = "blacknode-ros2", component = "core", version = ">=0.5.6,<1.0.0" },
 ]
 

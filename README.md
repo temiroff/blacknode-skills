@@ -4,9 +4,14 @@ This repository is the task-level behavior layer. Its public domains are
 `follow`, `pick-place`, `delivery`, `docking`, and `inspection`.
 
 A skill coordinates stable capabilities supplied by robot, perception,
-controller, and agent packages. For example, pick-place composes detection,
+motion, and agent packages. For example, pick-place composes detection,
 arm planning, arm execution, and gripper actions. Skills do not bind to vendor
 SDKs, device paths, CAN frames, serial ports, or hardware-specific drivers.
+Motion requests pass through `blacknode-motion/arm` command arbitration and
+safety before a concrete driver receives them.
+
+`follow-person` is a deprecated compatibility name for `follow`. It emits a
+replacement warning and is planned for removal in `1.0.0`.
 
 The `follow` implementation and its ROS 2 adapter are available today. Other
 domains become active when their executable nodes and dependencies are ready.
