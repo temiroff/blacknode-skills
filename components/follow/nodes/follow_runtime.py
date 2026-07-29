@@ -15,6 +15,7 @@ import time
 import urllib.request
 from typing import Any
 
+from blacknode.pkg.blacknode_motion.arm import arm_controller
 from blacknode.pkg.blacknode_ros2 import rosbridge_runtime as rb
 
 _continuous_follow_lock = threading.Lock()
@@ -103,6 +104,7 @@ def _stop_continuous_follow(run_id: str) -> bool:
     thread = item.get("thread")
     if thread is not None and thread is not threading.current_thread():
         thread.join(timeout=2.0)
+    arm_controller.release_motion_owner(f"skill:follow:{run_id}")
     return True
 
 
@@ -255,11 +257,36 @@ def _continuous_follow_step(item: dict[str, Any], ctx: dict[str, Any]) -> dict[s
     if joint in limits:
         lower, upper = limits[joint]
         target_value = min(upper, max(lower, raw_target))
-    item["command_target"] = target_value
-    item["target_joint"] = joint
     target_rad = dict(pose)
     target_rad[joint] = target_value
-    session.publish(target_rad)
+    resource = str(
+        (robot.get("driver") or {}).get("hardware_id")
+        or robot.get("device_id")
+        or f"{host}:{port}{command_topic}"
+    )
+    result = arm_controller.execute_joint_target(
+        lambda safe_target: session.publish(safe_target),
+        resource=resource,
+        owner=f"skill:follow:{ctx.get('run_id') or 'vision_follow'}",
+        current=pose,
+        target=target_rad,
+        limits=limits,
+        armed=bool(ctx.get("armed")),
+        feedback_age=state_age,
+        stale_after=state_timeout,
+        max_velocity=(
+            abs(_to_radians(max_step, units))
+            * max(0.2, float(ctx.get("loop_hz") or 2.0))
+        ),
+        interval=1.0 / max(0.2, float(ctx.get("loop_hz") or 2.0)),
+    )
+    if not result.get("ok"):
+        return _continuous_follow_result(
+            joint=joint,
+            report=f"BLOCKED by motion/arm: {result.get('error', 'command rejected')}",
+        )
+    item["command_target"] = result["target"][joint]
+    item["target_joint"] = joint
     before = {name: _from_radians(value, units) for name, value in pose.items()}
     target = {name: _from_radians(value, units) for name, value in target_rad.items()}
     clamp_note = "" if abs(raw_target - target_value) < 1e-9 else " (clamped)"

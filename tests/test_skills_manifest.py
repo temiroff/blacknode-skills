@@ -13,7 +13,28 @@ def test_skills_layer_catalog_loads_with_components_disabled():
     assert info.component_mode is True
     assert info.enabled_components == []
     assert set(info.components) == {"pick-place", "follow", "delivery", "docking", "inspection"}
-    assert info.components["follow"]["aliases"] == []
+    assert info.components["follow"]["aliases"] == ["follow-person"]
+    assert info.components["follow"]["deprecated_aliases"]["follow-person"] == {
+        "replacement": "follow",
+        "removal_version": "1.0.0",
+    }
+    requirements = info.components["follow"]["requirements"]
+    assert {
+        "package": "blacknode-motion",
+        "component": "arm",
+        "version": ">=0.6.0,<1.0.0",
+    } in requirements
+
+
+def test_follow_commands_pass_through_motion_arm_gateway():
+    root = Path(__file__).resolve().parents[1] / "components" / "follow" / "nodes"
+    sources = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted(root.glob("*.py"))
+    )
+    assert "arm_controller.execute_joint_target(" in sources
+    assert "blacknode_drivers" not in sources
+    assert "scservo_sdk" not in sources
 
 
 def test_follow_person_ros2_template_declares_every_adapter_it_uses():

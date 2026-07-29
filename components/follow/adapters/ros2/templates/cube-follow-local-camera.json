@@ -9,7 +9,7 @@
   },
   "metadata": {
     "template": true,
-    "description": "Open the local USB camera, colour-track a cube with TrackingObject plus live Qwen reasoning, and continuously follow it with the SO-ARM101 shoulder_pan. Armed on start — the arm moves as soon as you cook the graph.",
+    "description": "Open the local USB camera, colour-track a cube with TrackingObject plus live Qwen reasoning, and continuously follow it with the SO-ARM101 shoulder_pan. Motion starts disarmed and requires explicit operator arming.",
     "color": "#2563eb",
     "required_adapters": [
       "blacknode-skills/follow@ros2"

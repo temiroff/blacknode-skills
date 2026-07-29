@@ -16,6 +16,7 @@ import threading
 import time
 from typing import Any
 
+from blacknode.pkg.blacknode_motion.arm import arm_controller
 from blacknode.pkg.blacknode_ros2 import ros2_native_runtime as nr
 from blacknode.pkg.blacknode_ros2 import rosbridge_runtime as rb
 from blacknode.pkg.blacknode_ros2 import sample_stream
@@ -310,6 +311,7 @@ def _stop_leader_follower(run_id: str) -> bool:
     thread = item.get("thread")
     if thread is not None and thread is not threading.current_thread():
         thread.join(timeout=2.0)
+    arm_controller.release_motion_owner(f"skill:follow:{run_id}")
     return True
 
 
@@ -643,7 +645,31 @@ def _leader_follower_step(item: dict[str, Any], ctx: dict[str, Any]) -> dict[str
         return _leader_follower_result(running=True, armed=armed, live=True, leader_pose=leader_display, follower_pose=follower_display, target=target, report="BLOCKED: follower safety config/limits are incomplete.")
     commanded = armed and any(abs(target_rad[name] - follower_pose_rad[name]) > deadband for name in target)
     if commanded:
-        follower_session.publish(target_rad)
+        result = arm_controller.execute_joint_target(
+            lambda safe_target: follower_session.publish(safe_target),
+            resource=follower_id,
+            owner=f"skill:follow:{ctx.get('run_id') or 'leader_follower'}",
+            current=follower_pose_rad,
+            target=target_rad,
+            limits=limits,
+            armed=armed,
+            feedback_age=max(0.0, follower_age),
+            stale_after=max(0.1, float(ctx.get("stale_after") or 0.75)),
+            interval=1.0 / max(1.0, float(ctx.get("loop_hz") or 60.0)),
+        )
+        if not result.get("ok"):
+            return _leader_follower_result(
+                running=True,
+                armed=armed,
+                live=True,
+                leader_pose=leader_display,
+                follower_pose=follower_display,
+                target=target,
+                report=(
+                    "BLOCKED by motion/arm: "
+                    f"{result.get('error', 'command rejected')}"
+                ),
+            )
     sequence = int(item.get("sample_sequence") or 0) + 1
     captured_at_ns = time.time_ns()
     leader_sample = {

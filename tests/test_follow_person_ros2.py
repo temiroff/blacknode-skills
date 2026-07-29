@@ -453,7 +453,23 @@ def test_continuous_follow_step_reuses_persistent_joint_stream(monkeypatch):
             self.published = []
 
         def snapshot(self):
-            return ({"shoulder_pan": 0.0, "elbow": 0.25}, {}, 0.01)
+            return (
+                {"shoulder_pan": 0.0, "elbow": 0.25},
+                {
+                    "commands_allowed": True,
+                    "joints": {
+                        "shoulder_pan": {
+                            "lower": -1.0,
+                            "upper": 1.0,
+                        },
+                        "elbow": {
+                            "lower": -1.0,
+                            "upper": 1.0,
+                        },
+                    },
+                },
+                0.01,
+            )
 
         def wait_for_pose(self, timeout):
             return {"shoulder_pan": 0.0, "elbow": 0.25}
@@ -489,7 +505,9 @@ def test_continuous_follow_step_reuses_persistent_joint_stream(monkeypatch):
     assert len(acquired) == 1
     assert len(session.published) == 2
     assert set(session.published[0]) == {"shoulder_pan", "elbow"}
-    assert session.published[1]["shoulder_pan"] > session.published[0]["shoulder_pan"]
+    # Motion safety does not let the desired target run farther ahead while
+    # hardware feedback remains unchanged.
+    assert session.published[1]["shoulder_pan"] == session.published[0]["shoulder_pan"]
 
 
 def test_continuous_follow_step_resets_stale_joint_stream(monkeypatch):
