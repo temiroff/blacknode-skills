@@ -79,7 +79,7 @@ def test_cube_template_uses_live_cv2_stream_and_qwen3():
     assert ("shoulder_pan_index", "value", "follow_cube", "joint") not in edges
 
 
-def test_cube_ros2_template_keeps_ros_camera_and_generic_robot_transport():
+def test_cube_ros2_template_uses_generic_ros2_then_camera_processor():
     path = TEMPLATE_DIR / "cube-follow-ros2-camera.json"
     workflow = json.loads(path.read_text(encoding="utf-8"))
     node_types = {node_id: meta["type"] for node_id, meta in workflow["node_meta"].items()}
@@ -89,7 +89,8 @@ def test_cube_ros2_template_keeps_ros_camera_and_generic_robot_transport():
     }
 
     assert node_types["camera_run"] == "ROS2Run"
-    assert node_types["stream"] == "CameraROS2Subscribe"
+    assert node_types["stream"] == "ROS2"
+    assert node_types["stream_processor"] == "CameraImageProcessor"
     assert node_types["follow_cube"] == "ROS2FollowDetectionJoint"
     assert node_types["robot"] == "Robot"
     assert workflow["node_meta"]["robot"]["params"]["profile_id"] == "so_arm101"
@@ -101,7 +102,8 @@ def test_cube_ros2_template_keeps_ros_camera_and_generic_robot_transport():
     assert workflow["node_meta"]["stream"]["params"]["topic"] == "/camera/image_raw"
     assert ("check", "report", "camera_run", "trigger") in edges
     assert ("camera_run", "report", "stream", "trigger") in edges
-    assert ("stream", "frame_stream", "cv2_stream", "frame_stream") in edges
+    assert ("stream", "stream", "stream_processor", "source") in edges
+    assert ("stream_processor", "frame_stream", "cv2_stream", "frame_stream") in edges
 
 
 def test_cube_continuous_template_uses_generic_setup_nodes():
