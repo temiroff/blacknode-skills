@@ -15,7 +15,10 @@
       "blacknode-skills/follow@ros2"
     ],
     "required_components": [
-      "blacknode-ros2/processes"
+      "blacknode-ros2/processes",
+      "blacknode-ros2/core",
+      "blacknode-ros2/topics",
+      "blacknode-robot/capabilities"
     ],
     "required_packages": [
       {
@@ -25,7 +28,8 @@
           "TrackingObject",
           "TrackingColorMask",
           "ReasoningStream",
-          "CameraROS2Subscribe"
+          "CameraImageProcessor",
+          "DepthImageProcessor"
         ]
       },
       {
@@ -33,7 +37,8 @@
         "git_url": "https://github.com/temiroff/blacknode-ros2.git",
         "node_types": [
           "ROS2SystemCheck",
-          "ROS2Run"
+          "ROS2Run",
+          "ROS2"
         ]
       },
       {
@@ -47,7 +52,8 @@
         "name": "blacknode-robot",
         "git_url": "https://github.com/temiroff/blacknode-robot.git",
         "node_types": [
-          "Robot"
+          "Robot",
+          "ComputeDevice"
         ]
       },
       {
@@ -162,17 +168,24 @@
     },
     "stream": {
       "id": "stream",
-      "type": "CameraROS2Subscribe",
+      "type": "ROS2",
       "params": {
         "action": "start",
-        "stream_id": "vision_camera",
         "topic": "/camera/image_raw",
-        "message_type": "auto",
-        "host": "127.0.0.1",
-        "port": 0,
-        "max_fps": 10,
-        "max_width": 960,
-        "jpeg_quality": 80
+        "message_type": "sensor_msgs/msg/Image",
+        "transport": "image",
+        "stream_options": {
+          "host": "127.0.0.1",
+          "port": 0,
+          "max_fps": 10,
+          "max_width": 960,
+          "jpeg_quality": 80
+        },
+        "node_name": "blacknode_stream",
+        "history": 2,
+        "timeout": 15,
+        "stale_after_seconds": 2,
+        "qos": "sensor_data"
       },
       "pos": [
         1000,
@@ -180,66 +193,80 @@
       ],
       "inputs": [
         "trigger",
+        "device",
         "action",
-        "stream_id",
         "topic",
         "message_type",
-        "host",
-        "port",
-        "max_fps",
-        "max_width",
-        "jpeg_quality"
+        "transport",
+        "stream_options",
+        "node_name",
+        "history",
+        "timeout",
+        "stale_after_seconds",
+        "qos"
       ],
       "outputs": [
-        "preview",
-        "streaming",
-        "stream_url",
-        "snapshot_url",
-        "stream_id",
-        "report",
-        "frame_stream"
+        "running",
+        "message",
+        "messages",
+        "stream",
+        "status",
+        "received",
+        "backend",
+        "report"
       ],
       "input_types": {
         "trigger": "Any",
+        "device": "Dict",
         "action": "Text",
-        "stream_id": "Text",
         "topic": "Text",
         "message_type": "Text",
-        "host": "Text",
-        "port": "Int",
-        "max_fps": "Float",
-        "max_width": "Int",
-        "jpeg_quality": "Int"
+        "transport": "Text",
+        "stream_options": "Dict",
+        "node_name": "Text",
+        "history": "Int",
+        "timeout": "Float",
+        "stale_after_seconds": "Float",
+        "qos": "Text"
       },
       "output_types": {
-        "preview": "Image",
-        "streaming": "Bool",
-        "stream_url": "Text",
-        "snapshot_url": "Text",
-        "stream_id": "Text",
-        "report": "Text",
-        "frame_stream": "Dict"
+        "running": "Bool",
+        "message": "Dict",
+        "messages": "List",
+        "stream": "Dict",
+        "status": "Dict",
+        "received": "Int",
+        "backend": "Text",
+        "report": "Text"
       },
       "input_defaults": {
-        "action": "start",
-        "stream_id": "vision_camera",
-        "topic": "/camera/image_raw",
-        "message_type": "auto",
-        "host": "127.0.0.1",
-        "port": 0,
-        "max_fps": 10,
-        "max_width": 960,
-        "jpeg_quality": 80
+        "action": "status",
+        "topic": "/scan",
+        "message_type": "",
+        "transport": "auto",
+        "stream_options": {},
+        "node_name": "blacknode_ros2_topic",
+        "history": 10,
+        "timeout": 10,
+        "stale_after_seconds": 2,
+        "qos": "sensor_data"
       },
       "input_choices": {
         "action": [
+          "once",
           "start",
+          "status",
           "stop"
         ],
-        "message_type": [
+        "transport": [
           "auto",
-          "raw",
-          "compressed"
+          "message",
+          "image"
+        ],
+        "qos": [
+          "sensor_data",
+          "reliable",
+          "transient_local"
         ]
       }
     },
@@ -1030,6 +1057,82 @@
         "value": "Bool"
       },
       "input_defaults": {}
+    },
+    "sensor_device": {
+      "id": "sensor_device",
+      "type": "ComputeDevice",
+      "params": {
+        "device_id": "",
+        "device_name": "",
+        "inspection": {}
+      },
+      "pos": [
+        40,
+        -160
+      ],
+      "inputs": [
+        "device_id",
+        "device_name",
+        "inspection"
+      ],
+      "outputs": [
+        "configured",
+        "inspection_available",
+        "device",
+        "inspection",
+        "report"
+      ],
+      "input_types": {
+        "device_id": "Text",
+        "device_name": "Text",
+        "inspection": "Dict"
+      },
+      "output_types": {
+        "configured": "Bool",
+        "inspection_available": "Bool",
+        "device": "Dict",
+        "inspection": "Dict",
+        "report": "Text"
+      },
+      "input_defaults": {
+        "device_id": "",
+        "device_name": "",
+        "inspection": {}
+      }
+    },
+    "stream_processor": {
+      "id": "stream_processor",
+      "type": "CameraImageProcessor",
+      "params": {},
+      "pos": [
+        1390,
+        1043.5
+      ],
+      "inputs": [
+        "source"
+      ],
+      "outputs": [
+        "preview",
+        "ready",
+        "stream_url",
+        "snapshot_url",
+        "frame_stream",
+        "health",
+        "report"
+      ],
+      "input_types": {
+        "source": "Dict"
+      },
+      "output_types": {
+        "preview": "Image",
+        "ready": "Bool",
+        "stream_url": "Text",
+        "snapshot_url": "Text",
+        "frame_stream": "Dict",
+        "health": "Dict",
+        "report": "Text"
+      },
+      "input_defaults": {}
     }
   },
   "edges": [
@@ -1076,7 +1179,7 @@
       "to_port": "trigger"
     },
     {
-      "from": "stream",
+      "from": "stream_processor",
       "from_port": "snapshot_url",
       "to": "live_reason",
       "to_port": "image_url"
@@ -1190,13 +1293,13 @@
       "to_port": "joint"
     },
     {
-      "from": "stream",
+      "from": "stream_processor",
       "from_port": "snapshot_url",
       "to": "cuda_filter",
       "to_port": "source_url"
     },
     {
-      "from": "stream",
+      "from": "stream_processor",
       "from_port": "frame_stream",
       "to": "cv2_stream",
       "to_port": "frame_stream"
@@ -1212,6 +1315,18 @@
       "from_port": "robot",
       "to": "joint_state",
       "to_port": "robot"
+    },
+    {
+      "from": "stream",
+      "from_port": "stream",
+      "to": "stream_processor",
+      "to_port": "source"
+    },
+    {
+      "from": "sensor_device",
+      "from_port": "device",
+      "to": "stream",
+      "to_port": "device"
     }
   ]
 }
